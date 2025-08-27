@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Open-Yolo
+Comment=Gestionnaire de curseurs personnalisés pour Linux
+Exec=@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_BINDIR@/OpenYolo
+Icon=@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_DATADIR@/open-yolo/icons/open-yolo.png
+Terminal=false
+Categories=Utility;GTK;Settings;

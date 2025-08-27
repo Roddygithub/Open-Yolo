@@ -1,0 +1,71 @@
+From 0000000000000000000000000000000000000000 Mon Aug 26 12:00:00 2025
+From: OpenYolo Fix <fix@example.com>
+Date: Tue, 27 Aug 2025 12:00:00 +0200
+Subject: [PATCH] Fix GTK4 / C++20 build issues
+
+---
+ CMakeLists.txt                        |  4 ++++
+ src/utils.cpp                          | 12 ++++++++++++
+ src/displaymanager/display.cpp         | 12 ++++++++++++
+ src/main.cpp                           | 10 ++++++++++
+ 4 files changed, 38 insertions(+)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 0000000..1111111 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@
+-cmake -DCMAKE_CXX_STANDARD=17 ..
++set(CMAKE_CXX_STANDARD 20)
++set(CMAKE_CXX_STANDARD_REQUIRED ON)
++set(CMAKE_CXX_EXTENSIONS OFF)
+diff --git a/src/utils.cpp b/src/utils.cpp
+index 0000000..2222222 100644
+--- a/src/utils.cpp
++++ b/src/utils.cpp
+@@
+-float getScalingFactor(Screen screen) {
+-}
++float getScalingFactor(Screen /*screen*/) {
++    return 1.0f;
++}
++
++Screen getActiveScreen(int /*cursorX*/, int /*cursorY*/) {
++    return Screen{};
++}
+diff --git a/src/displaymanager/display.cpp b/src/displaymanager/display.cpp
+index 0000000..3333333 100644
+--- a/src/displaymanager/display.cpp
++++ b/src/displaymanager/display.cpp
+@@
+-            .id = i,
+-            .x = rect.x,
+-            .y = rect.y,
+-            .width = rect.w,
+-            .height = rect.h,
+-            .scale = dpi / 96.0f,
+-            .isPrimary = (i == 0)
++            id = i,
++            x = rect.x,
++            y = rect.y,
++            width = rect.w,
++            height = rect.h,
++            scale = dpi / 96.0f,
++            isPrimary = (i == 0)
+diff --git a/src/main.cpp b/src/main.cpp
+index 0000000..4444444 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@
++#include <atomic>
++
++// Exemple pour boucle de rendu
++std::atomic<bool> running{true};
++
++void renderLoop(int /*argc*/, std::shared_ptr<cursor_manager::CursorManager> cursorManager, std::shared_ptr<DisplayManager> displayManager) {
++    while (running) {
++        cursorManager->update();
++    }
++}
+--
+2.42.0

@@ -1,0 +1,102 @@
+# Fichiers de compilation
+build/
+bin/
+lib/
+*.o
+*.a
+*.so
+*.dll
+*.exe
+
+# Fichiers de configuration système
+.DS_Store
+.idea/
+.vscode/
+*.user
+*.suo
+*.ncb
+*.sdf
+*.opensdf
+*.sln
+*.vcxproj*
+*.vcxproj.filters
+*.vcxproj.user
+
+# Fichiers de débogage
+*.pdb
+*.idb
+*.ilk
+*.exp
+*.lib
+*.dll
+*.exe
+
+# Fichiers de sauvegarde
+*~
+*.bak
+*.swp
+*.swo
+
+# Fichiers temporaires
+*.tmp
+*.temp
+
+# Fichiers de dépendances
+dep/
+
+# Fichiers de configuration utilisateur
+*.userprefs
+
+# Fichiers de cache
+.cache/
+
+# Fichiers de logs
+*.log
+
+# Fichiers de paquets
+deploy/
+*.deb
+*.rpm
+*.tar.gz
+*.zip
+
+# Fichiers de configuration locaux (à personnaliser)
+config.ini
+settings.ini
+
+# Fichiers de base de données
+*.db
+*.sqlite
+
+# Fichiers de test
+*.test
+*.out
+
+# Fichiers de couverture de code
+*.gcov
+*.gcno
+*.gcda
+
+# Fichiers de profilage
+*.prof
+*.gprof
+
+# Fichiers de documentation générés
+doc/
+html/
+latex/
+
+# Fichiers de compilation CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+install_manifest.txt
+CTestTestfile.cmake
+Testing/
+*.cmake
+
+# Fichiers de compilation spécifiques à CLion
+.idea/
+cmake-build-debug/
+cmake-build-release/

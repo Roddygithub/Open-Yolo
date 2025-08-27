@@ -1,0 +1,11 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+
+Name: OpenYolo
+Description: Gestionnaire de curseurs personnalisés pour Linux
+Version: @OpenYolo_VERSION@
+Requires: gtkmm-3.0 >= 3.22.0 sdl2 >= 2.0.10 sdl2_image >= 2.0.5
+Libs: -L${libdir} -lOpenYolo
+Cflags: -I${includedir}
