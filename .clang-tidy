@@ -1,0 +1,264 @@
+---
+# Configuration de base pour clang-tidy
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-exception-escape,
+  -bugprone-macro-parentheses,
+  -bugprone-signed-char-misuse,
+  -bugprone-too-small-loop-variable,
+  
+  clang-analyzer-*,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+  -clang-analyzer-cplusplus.*,
+  
+  performance-*,
+  -performance-no-int-to-ptr,
+  -performance-inefficient-string-concatenation,
+  
+  readability-*,
+  -readability-identifier-length,
+  -readability-magic-numbers,
+  -readability-function-cognitive-complexity,
+  
+  misc-*,
+  -misc-non-private-member-variables-in-classes,
+  -misc-redundant-expression,
+  
+  modernize-*,
+  -modernize-use-trailing-return-type,
+  -modernize-avoid-c-arrays,
+  
+  cppcoreguidelines-*,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-pro-type-vararg,
+  -cppcoreguidelines-owning-memory,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-pro-type-union-access,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-pro-type-reinterpret-cast
+
+# Options spécifiques
+CheckOptions:
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.FunctionCase
+    value: camelBack
+  - key: readability-identifier-naming.MemberCase
+    value: camelBack
+  - key: readability-identifier-naming.ParameterCase
+    value: camelBack
+  - key: readability-identifier-naming.VariableCase
+    value: camelBack
+  - key: readability-identifier-naming.NamespaceCase
+    value: lower_case
+  - key: readability-identifier-naming.ConstantCase
+    value: UPPER_CASE
+
+# Fichiers à ignorer
+AnalyzeTemporaryDtors: false
+HeaderFilterRegex: '.*'
+FormatStyle: file
+WarningsAsErrors: ''
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+ChecksEnabled: true
+CheckOptions: []
+HeaderFilterRegex: ''
+AnalyzerOptions: []
+ExtraArgs: []
+UseColor: true
+SystemHeaders: false
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+ChecksEnabled: true
+CheckOptions: []
+HeaderFilterRegex: ''
+AnalyzerOptions: []
+ExtraArgs: []
+UseColor: true
+SystemHeaders: false
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+ChecksEnabled: true
+CheckOptions: []
+HeaderFilterRegex: ''
+AnalyzerOptions: []
+ExtraArgs: []
+UseColor: true
+SystemHeaders: false
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+ChecksEnabled: true
+CheckOptions: []
+HeaderFilterRegex: ''
+AnalyzerOptions: []
+ExtraArgs: []
+UseColor: true
+SystemHeaders: false
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+ChecksEnabled: true
+CheckOptions: []
+HeaderFilterRegex: ''
+AnalyzerOptions: []
+ExtraArgs: []
+UseColor: true
+SystemHeaders: false
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+ChecksEnabled: true
+CheckOptions: []
+HeaderFilterRegex: ''
+AnalyzerOptions: []
+ExtraArgs: []
+UseColor: true
+SystemHeaders: false
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+ChecksEnabled: true
+CheckOptions: []
+HeaderFilterRegex: ''
+AnalyzerOptions: []
+ExtraArgs: []
+UseColor: true
+SystemHeaders: false
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+ChecksEnabled: true
+CheckOptions: []
+HeaderFilterRegex: ''
+AnalyzerOptions: []
+ExtraArgs: []
+UseColor: true
+SystemHeaders: false
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+ChecksEnabled: true
+CheckOptions: []
+HeaderFilterRegex: ''
+AnalyzerOptions: []
+ExtraArgs: []
+UseColor: true
+SystemHeaders: false
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+ChecksEnabled: true
+CheckOptions: []
+HeaderFilterRegex: ''
+AnalyzerOptions: []
+ExtraArgs: []
+UseColor: true
+SystemHeaders: false
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+ChecksEnabled: true
+CheckOptions: []
+HeaderFilterRegex: ''
+AnalyzerOptions: []
+ExtraArgs: []
+UseColor: true
+SystemHeaders: false
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+ChecksEnabled: true
+CheckOptions: []
+HeaderFilterRegex: ''
+AnalyzerOptions: []
+ExtraArgs: []
+UseColor: true
+SystemHeaders: false
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+ChecksEnabled: true
+CheckOptions: []
+HeaderFilterRegex: ''
+AnalyzerOptions: []
+ExtraArgs: []
+UseColor: true
+SystemHeaders: false
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+ChecksEnabled: true
+CheckOptions: []
+HeaderFilterRegex: ''
+AnalyzerOptions: []
+ExtraArgs: []
+UseColor: true
+SystemHeaders: false
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+ChecksEnabled: true
+CheckOptions: []
+HeaderFilterRegex: ''
+AnalyzerOptions: []
+ExtraArgs: []
+UseColor: true
+SystemHeaders: false
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+ChecksEnabled: true
+CheckOptions: []
+HeaderFilterRegex: ''
+AnalyzerOptions: []
+ExtraArgs: []
+UseColor: true
+SystemHeaders: false
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+ChecksEnabled: true
+CheckOptions: []
+HeaderFilterRegex: ''
+AnalyzerOptions: []
+ExtraArgs: []
+UseColor: true
+SystemHeaders: false
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+ChecksEnabled: true
+CheckOptions: []
+HeaderFilterRegex: ''
+AnalyzerOptions: []
+ExtraArgs: []
+UseColor: true
+SystemHeaders: false
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+ChecksEnabled: true
+CheckOptions: []
+HeaderFilterRegex: ''
+AnalyzerOptions: []
+ExtraArgs: []
+UseColor: true
+SystemHeaders: false
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+ChecksEnabled: true
+CheckOptions: []
+HeaderFilterRegex: ''
+AnalyzerOptions: []
+ExtraArgs: []
+UseColor: true
+SystemHeaders: false
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+ChecksEnabled: true
+CheckOptions: []
+HeaderFilterRegex: ''
+AnalyzerOptions: []
+ExtraArgs: []
+UseColor: true
+SystemHeaders: false
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+ChecksEnabled: true
+CheckOptions: []
+HeaderFilterRegex: ''
+AnalyzerOptions: []
+ExtraArgs: []
+UseColor: true
+SystemHeaders: false

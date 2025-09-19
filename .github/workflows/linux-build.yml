@@ -1,0 +1,63 @@
+name: Linux Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build-ubuntu:
+    name: Build on Ubuntu
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+    
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          git \
+          pkg-config \
+          libgtkmm-3.0-dev \
+          libsdl2-dev \
+          libsdl2-image-dev \
+          libgl1-mesa-dev \
+          libglew-dev \
+          libgif-dev \
+          xorg-dev \
+          libx11-xcb-dev \
+          libwayland-dev \
+          libxkbcommon-dev
+    
+    - name: Configure CMake
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_LOGGING=ON -DBUILD_TESTS=ON
+    
+    - name: Build
+      run: |
+        cd build
+        make -j$(nproc)
+    
+    - name: Run Tests
+      run: |
+        cd build
+        ctest --output-on-failure
+    
+    - name: Check Formatting
+      run: |
+        find src -name '*.cpp' -o -name '*.hpp' | xargs clang-format --dry-run --Werror
+    
+    - name: Static Analysis
+      run: |
+        sudo apt-get install -y clang-tidy
+        cd build
+        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
+        run-clang-tidy -j$(nproc) -checks='*' -p=./

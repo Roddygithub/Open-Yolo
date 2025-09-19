@@ -1,11 +1,10 @@
-#include "InputManager.hpp"
+#include "input/InputManager.hpp"
 #include "gui/MainWindow.hpp"
 #include <iostream>
 #include <sstream>
 #include <gtkmm/application.h>
 #include <gtkmm/window.h>
 #include <gdkmm/display.h>
-#include <gdkmm/device.h>
 #include <gdkmm/device.h>
 #include <gdkmm/displaymanager.h>
 #include <gdkmm/seat.h>

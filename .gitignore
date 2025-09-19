@@ -1,35 +1,86 @@
-# Fichiers de compilation
+# Répertoires de build et d'installation
 build/
 bin/
 lib/
+install/
+
+# Fichiers objets et bibliothèques
 *.o
 *.a
 *.so
+*.so.*
+*.dylib
 *.dll
 *.exe
 
-# Fichiers de configuration système
-.DS_Store
-.idea/
-.vscode/
-*.user
-*.suo
-*.ncb
-*.sdf
-*.opensdf
-*.sln
-*.vcxproj*
-*.vcxproj.filters
-*.vcxproj.user
-
-# Fichiers de débogage
+# Fichiers de débogage et symboles
+*.dSYM/
+*.dylib.dSYM/
+*.so.dSYM/
 *.pdb
 *.idb
 *.ilk
 *.exp
 *.lib
-*.dll
-*.exe
+*.tlog
+*.log
+*.iobj
+*.ipdb
+
+# Fichiers de cache et temporaires
+.cache/
+*.swp
+*~
+*.bak
+*.tmp
+*.temp
+*.swo
+
+# Fichiers de configuration d'IDE et d'éditeurs
+.vscode/
+.idea/
+*.code-workspace
+*.sublime-workspace
+*.sublime-project
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Fichiers de configuration locaux
+*.local
+.env
+.env.*
+!.env.example
+
+# Fichiers de compilation
+compile_commands.json
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+*.cmake
+Makefile
+*.ninja
+*.ninja_deps
+*.ninja_log
+
+# Fichiers de couverture de test
+coverage/
+*.gcda
+*.gcno
+*.gcov
+
+# Fichiers de documentation générés
+docs/_build/
+docs/api/
+
+# Fichiers de package
+*.deb
+*.rpm
+*.tar.gz
+*.zip
+*.iobj
+*.ipdb
 
 # Fichiers de sauvegarde
 *~
@@ -46,8 +97,43 @@ dep/
 
 # Fichiers de configuration utilisateur
 *.userprefs
+*.user
+*.suo
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.VC.opendb
 
 # Fichiers de cache
+.vs/
+.vscode/
+.idea/
+*.code-workspace
+
+# Fichiers vcpkg
+vcpkg/
+
+# Fichiers de sortie
+out/
+Release/
+Debug/
+x64/
+Win32/
+
+# Fichiers CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
 .cache/
 
 # Fichiers de logs

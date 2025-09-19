@@ -1,3 +1,8 @@
+# Fichier CMake pour les tests
+
+# Version minimale requise de CMake
+cmake_minimum_required(VERSION 3.15)
+
 # Configuration for tests
 set(TEST_SOURCES
     test_cursormanager.cpp
@@ -35,9 +40,16 @@ target_link_libraries(open-yolo-tests
 target_include_directories(open-yolo-tests
     PRIVATE
     ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include/cursormanager
+    ${CMAKE_SOURCE_DIR}/include/input
+    ${CMAKE_SOURCE_DIR}/include/displaymanager
+    ${CMAKE_SOURCE_DIR}/include/gui
     ${GTKMM_INCLUDE_DIRS}
     ${SDL2_INCLUDE_DIRS}
     ${SDL2IMAGE_INCLUDE_DIRS}
+    ${GLEW_INCLUDE_DIRS}
+    ${GIF_INCLUDE_DIRS}
+    ${OPENGL_INCLUDE_DIR}
 )
 
 # Compile definitions

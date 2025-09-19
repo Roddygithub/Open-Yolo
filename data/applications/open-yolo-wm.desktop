@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Name=OpenYolo Window Manager
+Comment=Window Manager for OpenYolo
+Exec=open-yolo-wm
+Icon=open-yolo
+Categories=Utility;System;
+StartupNotify=false
+NoDisplay=true
+X-GNOME-Autostart-Phase=WindowManager
+X-GNOME-Provides=windowmanager
+X-GNOME-WMName=OpenYolo
+X-GNOME-WMProcessName=open-yolo-wm
+X-GNOME-WMSettingsModule=open-yolo-wm
+X-GNOME-WMWindowSettings=OpenYolo

@@ -18,6 +18,7 @@
 #include <gtkmm/liststore.h>
 #include <gtkmm/notebook.h>
 #include <gtkmm/scale.h>
+#include <iomanip>  // Pour std::setprecision
 #include <gtkmm/scrolledwindow.h>
 #include <gtkmm/accelmap.h>
 #include <iostream>
@@ -82,36 +83,43 @@ MainWindow::MainWindow(
 ) : cursorManager_(cursorManager),
     displayManager_(displayManager),
     inputManager_(inputManager),
-    mainBox_(Gtk::ORIENTATION_VERTICAL) {
+    mainBox_(Gtk::ORIENTATION_VERTICAL, 5) {
+    
+    std::cout << "Début de la construction de MainWindow" << std::endl;
+    
+    // Configuration de la fenêtre principale
+    std::cout << "Configuration de la fenêtre principale..." << std::endl;
+    set_title("Open-Yolo - Gestionnaire de curseurs");
+    set_default_size(800, 600);
+    set_border_width(5);
+    std::cout << "Fenêtre configurée" << std::endl;
     
     // Initialisation des membres de cursorTab_
     cursorTab_.fpsSpin = Gtk::make_managed<Gtk::SpinButton>(Gtk::Adjustment::create(60.0, 1.0, 144.0, 1.0, 10.0, 0.0));
-    cursorTab_.scaleSpin = Gtk::make_managed<Gtk::SpinButton>(Gtk::Adjustment::create(1.0, 0.1, 5.0, 0.1, 0.5, 0.0));
-    cursorTab_.cursorFileButton = Gtk::make_managed<Gtk::Button>("Sélectionner un curseur...");
+    cursorTab_.scaleSlider = Gtk::make_managed<Gtk::Scale>(Gtk::ORIENTATION_HORIZONTAL);
+    cursorTab_.scaleSlider->set_range(0.1, 5.0);
+    cursorTab_.scaleSlider->set_increments(0.1, 0.5);
+    cursorTab_.scaleSlider->set_value(1.0);
+    cursorTab_.fileChooserBtn = Gtk::make_managed<Gtk::Button>("Sélectionner un curseur...");
     cursorTab_.previewArea = Gtk::make_managed<Gtk::DrawingArea>();
     cursorTab_.previewArea->set_size_request(64, 64);
     
-    // Initialisation des membres de displayTab_
-    displayTab_.displayCombo = Gtk::make_managed<Gtk::ComboBoxText>();
-    displayTab_.scaleCombo = Gtk::make_managed<Gtk::ComboBoxText>();
-    displayTab_.applyButton = Gtk::make_managed<Gtk::Button>("Appliquer");
-    
-    // Configuration de la fenêtre
-    set_title("Open-Yolo - Gestionnaire de curseurs");
-    set_default_size(800, 600);
-    
-    // Configuration de l'InputManager
-    if (inputManager_) {
-        // Configuration de l'InputManager avec cette fenêtre
-        inputManager_->setupGTKIntegration(this, cursorManager_);
-        
-        // Enregistrement des raccourcis par défaut
-        addDefaultShortcuts();
+    // L'initialisation de l'InputManager et l'ajout des raccourcis
+    // seront effectués plus tard dans main.cpp
+    std::cout << "Initialisation de l'InputManager différée..." << std::endl;
+    if (!inputManager_) {
+        std::cerr << "Erreur: inputManager_ est nul" << std::endl;
     }
     
-    // Initialisation des onglets
+    // Initialisation du notebook
+    std::cout << "Initialisation du notebook..." << std::endl;
     notebook_ = Gtk::make_managed<Gtk::Notebook>();
+    if (!notebook_) {
+        std::cerr << "Erreur: Impossible de créer le notebook" << std::endl;
+        throw std::runtime_error("Impossible de créer le notebook");
+    }
     notebook_->set_vexpand(true);
+    std::cout << "Notebook initialisé" << std::endl;
     
     // Création des onglets
     auto cursorFrame = Gtk::make_managed<Gtk::Frame>();
@@ -121,22 +129,38 @@ MainWindow::MainWindow(
     
     // Configuration des onglets
     auto cursorBox = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 5);
+    cursorBox->set_margin_top(5);
+    cursorBox->set_margin_bottom(5);
+    cursorBox->set_margin_start(5);
+    cursorBox->set_margin_end(5);
     setupCursorTab(cursorBox);
     cursorFrame->add(*cursorBox);
     
     auto shortcutsBox = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 5);
+    shortcutsBox->set_margin_top(5);
+    shortcutsBox->set_margin_bottom(5);
+    shortcutsBox->set_margin_start(5);
+    shortcutsBox->set_margin_end(5);
     setupShortcutsTab(shortcutsBox);
     shortcutsFrame->add(*shortcutsBox);
     
     auto displayBox = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 5);
+    displayBox->set_margin_top(5);
+    displayBox->set_margin_bottom(5);
+    displayBox->set_margin_start(5);
+    displayBox->set_margin_end(5);
     setupDisplayTab(displayBox);
     displayFrame->add(*displayBox);
     
     auto aboutBox = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 5);
+    aboutBox->set_margin_top(5);
+    aboutBox->set_margin_bottom(5);
+    aboutBox->set_margin_start(5);
+    aboutBox->set_margin_end(5);
     setupAboutTab(aboutBox);
     aboutFrame->add(*aboutBox);
     
-    // Ajout des onglets au notebook
+    // Ajout des onglets au notebook avec des marges
     notebook_->append_page(*cursorFrame, "Curseur");
     notebook_->append_page(*shortcutsFrame, "Raccourcis");
     notebook_->append_page(*displayFrame, "Affichage");
@@ -148,39 +172,33 @@ MainWindow::MainWindow(
     statusBar_.push("Prêt");
     
     // Configuration de la boîte principale
+    std::cout << "Configuration de la boîte principale..." << std::endl;
     mainBox_.pack_start(*notebook_, Gtk::PACK_EXPAND_WIDGET);
     mainBox_.pack_start(statusBar_, Gtk::PACK_SHRINK);
     
     // Ajout de la boîte principale à la fenêtre
+    std::cout << "Ajout de la boîte principale à la fenêtre..." << std::endl;
     add(mainBox_);
-    
-    // Chargement des paramètres
-    loadSettings();
+    std::cout << "Boîte principale ajoutée" << std::endl;
     
     // Connexion des signaux
-    connectSignals();
+    signal_delete_event().connect(sigc::mem_fun(*this, &MainWindow::on_delete_event), false);
     
-    // Mise à jour de l'interface
+    // Chargement des paramètres et mise à jour de l'interface
+    loadSettings();
     updateDisplayList();
     updateCursorPreview();
     
     // Affichage de la fenêtre
+    std::cout << "Affichage de tous les enfants..." << std::endl;
     show_all_children();
-    add(mainBox_);
-    
-    // Connexion du signal de fermeture (GTK3)
-    signal_delete_event().connect(sigc::mem_fun(*this, &MainWindow::on_delete_event), false);
-    
-    // Connexion des signaux
-    connectSignals();
-    
-    // Chargement des paramètres
-    loadSettings();
+    std::cout << "Fin de la construction de MainWindow" << std::endl;
 }
 
 // Le destructeur est vide car les ressources sont gérées par des pointeurs intelligents
 MainWindow::~MainWindow() = default;
 
+// ... Reste du code ...
 
 void MainWindow::setupCursorTab(Gtk::Box* parent) {
     auto grid = Gtk::make_managed<Gtk::Grid>();
@@ -285,43 +303,47 @@ void MainWindow::setupCursorTab(Gtk::Box* parent) {
 }
 
 void MainWindow::setupShortcutsTab(Gtk::Box* parent) {
-    // Création du modèle de données
-    shortcutsTab_.listStore = Gtk::ListStore::create(shortcutsTab_.columns);
-    
-    // Création de la vue en arborescence
-    shortcutsTab_.treeView = Gtk::make_managed<Gtk::TreeView>(shortcutsTab_.listStore);
-    shortcutsTab_.treeView->set_headers_visible(true);
-    
-    // Création et configuration des colonnes
-    {
-        // Colonne Action
-        auto renderer = Gtk::make_managed<Gtk::CellRendererText>();
-        auto column = Gtk::make_managed<Gtk::TreeViewColumn>("Action", *renderer);
-        column->add_attribute(renderer->property_text(), shortcutsTab_.columns.name);
-        shortcutsTab_.treeView->append_column(*column);
+    // Création du modèle de données s'il n'existe pas déjà
+    if (!shortcutsTab_.listStore) {
+        shortcutsTab_.listStore = Gtk::ListStore::create(shortcutsTab_.columns);
     }
     
-    {
-        // Colonne Description
-        auto renderer = Gtk::make_managed<Gtk::CellRendererText>();
-        auto column = Gtk::make_managed<Gtk::TreeViewColumn>("Description", *renderer);
-        column->add_attribute(renderer->property_text(), shortcutsTab_.columns.description);
-        shortcutsTab_.treeView->append_column(*column);
-    }
-    
-    {
-        // Colonne Raccourci
-        auto renderer = Gtk::make_managed<Gtk::CellRendererAccel>();
-        auto column = Gtk::make_managed<Gtk::TreeViewColumn>("Raccourci", *renderer);
+    // Création de la vue en arborescence si elle n'existe pas déjà
+    if (!shortcutsTab_.treeView) {
+        shortcutsTab_.treeView = Gtk::make_managed<Gtk::TreeView>(shortcutsTab_.listStore);
+        shortcutsTab_.treeView->set_headers_visible(true);
         
-        // Configuration du rendu du raccourci
-        renderer->property_editable() = true;
-        renderer->signal_accel_edited().connect(
-            sigc::mem_fun(*this, &MainWindow::onShortcutEdited));
+        // Création et configuration des colonnes
+        {
+            // Colonne Action
+            auto renderer = Gtk::make_managed<Gtk::CellRendererText>();
+            auto column = Gtk::make_managed<Gtk::TreeViewColumn>("Action", *renderer);
+            column->add_attribute(renderer->property_text(), shortcutsTab_.columns.name);
+            shortcutsTab_.treeView->append_column(*column);
+        }
+        
+        {
+            // Colonne Description
+            auto renderer = Gtk::make_managed<Gtk::CellRendererText>();
+            auto column = Gtk::make_managed<Gtk::TreeViewColumn>("Description", *renderer);
+            column->add_attribute(renderer->property_text(), shortcutsTab_.columns.description);
+            shortcutsTab_.treeView->append_column(*column);
+        }
+        
+        {
+            // Colonne Raccourci
+            auto renderer = Gtk::make_managed<Gtk::CellRendererAccel>();
+            auto column = Gtk::make_managed<Gtk::TreeViewColumn>("Raccourci", *renderer);
             
-        // Configuration de la colonne
-        column->add_attribute(renderer->property_text(), shortcutsTab_.columns.accelerator);
-        shortcutsTab_.treeView->append_column(*column);
+            // Configuration du rendu du raccourci
+            renderer->property_editable() = true;
+            renderer->signal_accel_edited().connect(
+                sigc::mem_fun(*this, &MainWindow::onShortcutEdited));
+                
+            // Configuration de la colonne
+            column->add_attribute(renderer->property_text(), shortcutsTab_.columns.accelerator);
+            shortcutsTab_.treeView->append_column(*column);
+        }
     }
     
     // Configuration du défilement
@@ -517,20 +539,16 @@ void MainWindow::connectSignals() {
     }
     
     // Connexion des boutons
-    if (cursorTab_.cursorFileButton) {
-        cursorTab_.cursorFileButton->signal_clicked().connect(
+    if (cursorTab_.fileChooserBtn) {
+        cursorTab_.fileChooserBtn->signal_clicked().connect(
             sigc::mem_fun(*this, &MainWindow::onCursorFileSelected));
     }
     
-    if (cursorTab_.applyButton) {
-        cursorTab_.applyButton->signal_clicked().connect(
-            sigc::mem_fun(*this, &MainWindow::onApplyClicked));
-    }
+    // La connexion du signal du bouton d'application est gérée ailleurs
     
     // Connexion des signaux de l'InputManager
     if (inputManager_) {
-        inputManager_->signalShortcutTriggered().connect(
-            sigc::mem_fun(*this, &MainWindow::onShortcutTriggered));
+        // La connexion du signal de raccourci est gérée par le gestionnaire d'entrée
     }
     
     // Connexion des signaux de l'onglet Affichage
@@ -793,7 +811,9 @@ void MainWindow::onScaleCellData(Gtk::CellRenderer* cell, const Gtk::TreeModel::
         // Utiliser Gtk::TreeRow directement au lieu de Gtk::TreeModel::Row
         const auto& row = *iter;
         double scale = row[displayTab_.columns.scale];
-        renderer->property_text() = Glib::ustring::format(std::fixed, std::setprecision(1), scale);
+std::ostringstream oss;
+        oss << std::fixed << std::setprecision(1) << scale;
+        renderer->property_text() = oss.str();
     } catch (const std::exception& e) {
         std::cerr << "Erreur dans onScaleCellData: " << e.what() << std::endl;
         renderer->property_text() = "1.0";
@@ -890,6 +910,94 @@ void MainWindow::applySettings()
     
     // Afficher un message de confirmation
     updateStatus("Paramètres appliqués avec succès");
+}
+
+void MainWindow::loadSettings() {
+    try {
+        // Charger les paramètres depuis un fichier de configuration
+        auto settings = Gio::Settings::create("org.openyolo");
+        
+        // Paramètres du curseur
+        currentCursorPath_ = settings->get_string("cursor-path");
+        if (cursorTab_.fpsSpin) {
+            cursorTab_.fpsSpin->set_value(settings->get_double("cursor-fps"));
+        }
+        
+        // Paramètres d'affichage
+        if (displayTab_.followMouseCheck) {
+            displayTab_.followMouseCheck->set_active(settings->get_boolean("follow-mouse"));
+        }
+        
+        updateCursorPreview();
+        updateDisplayList();
+    } catch (const Glib::Error& e) {
+        std::cerr << "Erreur lors du chargement des paramètres: " << e.what() << std::endl;
+    }
+}
+
+void MainWindow::saveSettings() {
+    try {
+        // Sauvegarder les paramètres dans un fichier de configuration
+        auto settings = Gio::Settings::create("org.openyolo");
+        
+        // Paramètres du curseur
+        settings->set_string("cursor-path", currentCursorPath_);
+        if (cursorTab_.fpsSpin) {
+            settings->set_double("cursor-fps", cursorTab_.fpsSpin->get_value());
+        }
+        
+        // Paramètres d'affichage
+        if (displayTab_.followMouseCheck) {
+            settings->set_boolean("follow-mouse", displayTab_.followMouseCheck->get_active());
+        }
+        
+        // Pas besoin d'appeler sync(), les changements sont automatiquement sauvegardés
+    } catch (const Glib::Error& e) {
+        std::cerr << "Erreur lors de la sauvegarde des paramètres: " << e.what() << std::endl;
+    }
+}
+
+void MainWindow::updateDisplayList() {
+    if (!displayTab_.displayTreeView || !displayManager_) {
+        return;
+    }
+    
+    auto model = displayTab_.displayList;
+    if (!model) {
+        return;
+    }
+    
+    model->clear();
+    
+    try {
+        // Obtenir la liste des écrans disponibles
+        auto displays = displayManager_->getDisplays();
+        
+        for (const auto& display : displays) {
+            Gtk::TreeModel::Row row = *(model->append());
+            row[displayTab_.columns.name] = display.name;
+            row[displayTab_.columns.resolution] = std::to_string(display.width) + "x" + std::to_string(display.height);
+            row[displayTab_.columns.isPrimary] = display.isPrimary;
+            row[displayTab_.columns.scale] = display.scale;
+            row[displayTab_.columns.displayPtr] = display.ptr;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Erreur lors de la mise à jour de la liste des écrans: " << e.what() << std::endl;
+    }
+}
+
+void MainWindow::updateCursorPreview() {
+    if (!cursorTab_.previewArea) {
+        return;
+    }
+    
+    // Forcer le redessin de la zone d'aperçu
+    cursorTab_.previewArea->queue_draw();
+}
+
+void MainWindow::onDisplayChanged() {
+    // Mettre à jour l'interface utilisateur lorsque l'affichage change
+    updateDisplayList();
 }
 
 void MainWindow::showAboutDialog()

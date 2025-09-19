@@ -1,0 +1,81 @@
+# Fichier de désinstallation pour @PROJECT_NAME@
+# Ce fichier est généré automatiquement par CMake
+
+# Message de démarrage
+message(STATUS "Désinstallation de @PROJECT_NAME@...")
+
+# Vérifier si le fichier manifeste existe
+if(EXISTS "@CMAKE_CURRENT_BINARY_DIR@/install_manifest.txt")
+    # Lire le fichier manifeste
+    file(STRINGS "@CMAKE_CURRENT_BINARY_DIR@/install_manifest.txt" files)
+    
+    # Supprimer chaque fichier listé
+    foreach(file ${files})
+        message(STATUS "Suppression du fichier: ${file}")
+        
+        # Vérifier si le fichier existe avant de le supprimer
+        if(EXISTS "${file}")
+            # Supprimer le fichier
+            execute_process(
+                COMMAND "@CMAKE_COMMAND@" -E remove -f "${file}"
+                RESULT_VARIABLE result
+            )
+            
+            # Vérifier si la suppression a réussi
+            if(NOT "${result}" STREQUAL "0")
+                message(WARNING "Impossible de supprimer le fichier: ${file}")
+            endif()
+            
+            # Vérifier si le répertoire parent est vide après la suppression
+            get_filename_component(dir "${file}" DIRECTORY)
+            
+            # Ne pas supprimer les répertoires système importants
+            if(NOT "${dir}" MATCHES "^/(usr|etc|var|lib|opt|sbin|bin|srv|boot|dev|proc|sys|run|mnt|media|snap)")
+                # Vérifier si le répertoire est vide
+                file(GLOB dir_content "${dir}/*")
+                list(LENGTH dir_content dir_content_count)
+                
+                # Si le répertoire est vide, le supprimer
+                if(dir_content_count EQUAL 0)
+                    message(STATUS "Suppression du répertoire vide: ${dir}")
+                    file(REMOVE_RECURSE "${dir}")
+                endif()
+            endif()
+        else()
+            message(STATUS "Le fichier n'existe pas, ignoré: ${file}")
+        endif()
+    endforeach()
+    
+    # Supprimer le fichier manifeste
+    file(REMOVE "@CMAKE_CURRENT_BINARY_DIR@/install_manifest.txt")
+    
+    message(STATUS "Désinstallation terminée avec succès!")
+else()
+    message(WARNING "Impossible de trouver le fichier manifeste d'installation. La désinstallation ne peut pas être effectuée automatiquement.")
+    message(STATUS "Vous pouvez essayer de supprimer manuellement les fichiers depuis @CMAKE_INSTALL_PREFIX@")
+endif()
+
+# Nettoyer les fichiers de cache et de configuration utilisateur
+if(UNIX AND NOT APPLE)
+    # Supprimer les fichiers de configuration utilisateur
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} -E remove -f "$ENV{HOME}/.config/open-yolo/config.ini"
+    )
+    
+    # Supprimer les fichiers de cache
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} -E remove_directory "$ENV{HOME}/.cache/open-yolo"
+    )
+    
+    # Supprimer les fichiers de données utilisateur
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} -E remove_directory "$ENV{HOME}/.local/share/open-yolo"
+    )
+    
+    # Supprimer les fichiers de log
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} -E remove "$ENV{HOME}/.local/state/open-yolo/logs/open-yolo.log"
+    )
+    
+    message(STATUS "Les fichiers de configuration et de cache utilisateur ont été supprimés.")
+endif()

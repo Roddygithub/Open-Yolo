@@ -10,7 +10,6 @@
 #include <gdkmm/event.h>
 #include <gdkmm/display.h>
 #include <gdkmm/device.h>
-#include <gdkmm/device.h>
 #include <gdkmm/seat.h>
 #include <gdkmm/window.h>
 
@@ -18,6 +17,8 @@
 namespace cursor_manager {
     class CursorManager;
 }
+
+// Déclaration anticipée de MainWindow
 class MainWindow;
 
 class InputManager {

@@ -61,7 +61,7 @@ class CursorManager {
 public:
     // Types d'effets disponibles
     enum class EffectType {
-        None,
+        NoEffect,  // Renommé de None à NoEffect pour éviter le conflit avec X11/X.h
         Shadow,
         Glow
     };

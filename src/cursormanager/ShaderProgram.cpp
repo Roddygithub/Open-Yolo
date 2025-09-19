@@ -1,4 +1,4 @@
-#include "cursormanager/ShaderProgram.hpp"
+#include "include/cursormanager/ShaderProgram.hpp"
 #include <fstream>
 #include <sstream>
 #include <iostream>

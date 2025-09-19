@@ -52,6 +52,9 @@ public:
     
     // Affichage de la boîte de dialogue À propos
     void showAboutDialog();
+    
+    // Ajout des raccourcis par défaut
+    void addDefaultShortcuts();
 
 protected:
     // Gestionnaires d'événements
@@ -105,7 +108,6 @@ private:
     
     // Gestion des raccourcis
     void onShortcutTriggered(const std::string& name);
-    void addDefaultShortcuts();
     
     // Utilitaires d'interface
     void updateStatus(const std::string& message);

@@ -1,0 +1,50 @@
+#!/bin/sh
+# Script de session pour OpenYolo
+# Ce script est généré automatiquement par CMake
+
+# Définir les variables d'environnement nécessaires
+export XDG_CURRENT_DESKTOP=OpenYolo
+export XDG_SESSION_TYPE=x11
+export XDG_SESSION_DESKTOP=OpenYolo
+export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+
+# Créer les répertoires de configuration et de cache si nécessaire
+mkdir -p "$XDG_CONFIG_HOME/open-yolo"
+mkdir -p "${XDG_CACHE_HOME:-$HOME/.cache}/open-yolo"
+mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/open-yolo"
+mkdir -p "${XDG_STATE_HOME:-$HOME/.local/state}/open-yolo/logs"
+
+# Définir le chemin vers les bibliothèques
+export LD_LIBRARY_PATH="@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_LIBDIR@:$LD_LIBRARY_PATH"
+
+# Définir le chemin vers les exécutables
+export PATH="@CMAKE_INSTALL_PREFIX@/bin:$PATH"
+
+# Démarrer le gestionnaire de fenêtres OpenYolo
+if [ -x "@CMAKE_INSTALL_PREFIX@/bin/open-yolo-wm" ]; then
+    # Démarrer le gestionnaire de fenêtres en arrière-plan
+    @CMAKE_INSTALL_PREFIX@/bin/open-yolo-wm &
+    WM_PID=$!
+    
+    # Attendre que le gestionnaire de fenêtres soit prêt
+    sleep 1
+    
+    # Vérifier que le gestionnaire de fenêtres est toujours en cours d'exécution
+    if ! kill -0 $WM_PID 2>/dev/null; then
+        echo "Erreur: Impossible de démarrer le gestionnaire de fenêtres OpenYolo" >&2
+        exit 1
+    fi
+    
+    # Démarrer l'application principale
+    @CMAKE_INSTALL_PREFIX@/bin/open-yolo
+    
+    # Nettoyer à la sortie
+    kill $WM_PID
+    wait $WM_PID
+else
+    # Si le gestionnaire de fenêtres n'est pas disponible, démarrer uniquement l'application
+    echo "Avertissement: Gestionnaire de fenêtres OpenYolo introuvable, démarrage en mode fenêtré" >&2
+    @CMAKE_INSTALL_PREFIX@/bin/open-yolo
+fi
+
+exit 0

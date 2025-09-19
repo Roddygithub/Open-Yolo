@@ -1,0 +1,94 @@
+version: '3.8'
+
+# Configuration des réseaux
+networks:
+  openyolo_net:
+    driver: bridge
+
+# Configuration des volumes
+volumes:
+  x11_socket:
+    name: x11_socket
+  x11_tmp:
+    name: x11_tmp
+  openyolo_data:
+    name: openyolo_data
+  openyolo_config:
+    name: openyolo_config
+  openyolo_cache:
+    name: openyolo_cache
+
+services:
+  # Service principal OpenYolo avec Xvfb intégré
+  open-yolo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - USER_UID=${UID:-1000}
+        - USER_GID=${GID:-1000}
+    container_name: open-yolo
+    hostname: openyolo-dev
+    environment:
+      # Configuration de l'affichage
+      - DISPLAY=:99
+      - SCREEN_WIDTH=1920
+      - SCREEN_HEIGHT=1080
+      - SCREEN_DEPTH=24
+      
+      # Configuration X11
+      - XAUTHORITY=/tmp/.Xauthority
+      - XDG_RUNTIME_DIR=/tmp/runtime
+      - XDG_DATA_HOME=/home/dev/.local/share
+      - XDG_CONFIG_HOME=/home/dev/.config
+      - XDG_CACHE_HOME=/home/dev/.cache
+      - XDG_STATE_HOME=/home/dev/.local/state
+      
+      # Configuration GTK
+      - GTK_THEME=Adwaita-dark
+      - GDK_BACKEND=x11
+      - CLUTTER_BACKEND=x11
+      - NO_AT_BRIDGE=1
+      
+      # Configuration de l'application
+      - OPEN_YOLO_DEBUG=1
+      - OPEN_YOLO_WM_CONFIG=/etc/xdg/open-yolo/wm.ini
+      - G_SLICE=always-malloc
+      - G_DEBUG=gc-friendly
+      - GTK_OVERLAY_SCROLLING=0
+      - GTK_CSD=0
+      - CLUTTER_VBLANK=none
+      - CLUTTER_PAINT=disable-clipped-redraws,disable-culling
+    volumes:
+      # Volumes système X11
+      - x11_socket:/tmp/.X11-unix:rw
+      - x11_tmp:/tmp:rw
+      
+      # Volumes de l'application
+      - openyolo_data:/home/dev/.local/share/open-yolo
+      - openyolo_config:/home/dev/.config/open-yolo
+      - openyolo_cache:/home/dev/.cache/open-yolo
+      
+      # Volumes de développement
+      - ./data:/workspace/data:rw
+      - .:/workspace/src:rw
+      - ./scripts:/workspace/scripts:ro
+      
+      # Configuration système
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/group:/etc/group:ro
+    networks:
+      - openyolo_net
+    cap_add:
+      - SYS_ADMIN
+      - IPC_LOCK
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+    tty: true
+    stdin_open: true
+    command: ["/bin/bash", "-c", "/usr/local/bin/start-xvfb.sh && /workspace/scripts/entrypoint.sh"]
+    restart: unless-stopped

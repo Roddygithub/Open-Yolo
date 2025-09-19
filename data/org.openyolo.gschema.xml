@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.openyolo" path="/org/openyolo/">
+    <!-- Paramètres de la fenêtre -->
+    <key name="window-width" type="i">
+      <default>1024</default>
+      <summary>Largeur de la fenêtre</summary>
+      <description>La largeur de la fenêtre principale de l'application.</description>
+    </key>
+    
+    <key name="window-height" type="i">
+      <default>768</default>
+      <summary>Hauteur de la fenêtre</summary>
+      <description>La hauteur de la fenêtre principale de l'application.</description>
+    </key>
+    
+    <key name="is-maximized" type="b">
+      <default>false</default>
+      <summary>État de maximisation</summary>
+      <description>Si la fenêtre est en mode maximisé ou non.</description>
+    </key>
+    
+    <key name="is-fullscreen" type="b">
+      <default>false</default>
+      <summary>Mode plein écran</summary>
+      <description>Si la fenêtre est en mode plein écran ou non.</description>
+    </key>
+    
+    <key name="last-folder" type="s">
+      <default>""</default>
+      <summary>Dernier dossier utilisé</summary>
+      <description>Le dernier dossier utilisé pour charger ou enregistrer des fichiers.</description>
+    </key>
+    
+    <!-- Paramètres du curseur -->
+    <key name="cursor-enabled" type="b">
+      <default>true</default>
+      <summary>Activer les curseurs personnalisés</summary>
+      <description>Active ou désactive les curseurs personnalisés de l'application.</description>
+    </key>
+    
+    <key name="cursor-size" type="d">
+      <default>1.0</default>
+      <range min="0.5" max="5.0" step="0.1"/>
+      <summary>Taille du curseur</summary>
+      <description>Échelle de taille du curseur (0.5 = 50%, 1.0 = 100%, 2.0 = 200%, etc.)</description>
+    </key>
+    
+    <key name="cursor-theme" type="s">
+      <default>"default"</default>
+      <summary>Thème du curseur</summary>
+      <description>Nom du thème de curseur à utiliser (doit être présent dans /usr/share/icons/ ou ~/.icons/)</description>
+    </key>
+    
+    <key name="cursor-hide-timeout" type="d">
+      <default>5.0</default>
+      <range min="0" max="60" step="0.5"/>
+      <summary>Délai avant masquage du curseur</summary>
+      <description>Délai en secondes avant de masquer le curseur en cas d'inactivité (0 = désactivé)</description>
+    </key>
+    
+    <key name="cursor-enable-transitions" type="b">
+      <default>true</default>
+      <summary>Activer les transitions</summary>
+      <description>Active ou désactive les effets de transition du curseur.</description>
+    </key>
+    
+    <key name="cursor-animation-speed" type="d">
+      <default>1.0</default>
+      <range min="0.1" max="5.0" step="0.1"/>
+      <summary>Vitesse d'animation</summary>
+      <description>Facteur de vitesse pour les animations du curseur.</description>
+    </key>
+    
+    <key name="cursor-enable-sound-effects" type="b">
+      <default>false</default>
+      <summary>Activer les effets sonores</summary>
+      <description>Joue des effets sonores lors des interactions avec le curseur.</description>
+    </key>
+    
+    <key name="cursor-enable-particles" type="b">
+      <default>true</default>
+      <summary>Activer les particules</summary>
+      <description>Affiche des effets de particules autour du curseur.</description>
+    </key>
+    
+    <key name="cursor-hover-color" type="s">
+      <default>"#4285F4"</default>
+      <summary>Couleur de surbrillance</summary>
+      <description>Couleur de surbrillance du curseur au format hexadécimal (#RRGGBB).</description>
+    </key>
+    
+    <key name="cursor-opacity" type="d">
+      <default>1.0</default>
+      <range min="0.1" max="1.0" step="0.05"/>
+      <summary>Opacité du curseur</summary>
+      <description>Niveau d'opacité du curseur (0.0 = transparent, 1.0 = opaque).</description>
+    </key>
+    
+    <key name="cursor-enable-shadow" type="b">
+      <default>true</default>
+      <summary>Activer l'ombre</summary>
+      <description>Ajoute une ombre portée au curseur pour un meilleur contraste.</description>
+    </key>
+    
+    <key name="cursor-shadow-color" type="s">
+      <default>"#000000"</default>
+      <summary>Couleur de l'ombre</summary>
+      <description>Couleur de l'ombre du curseur au format hexadécimal (#RRGGBB).</description>
+    </key>
+    
+    <key name="cursor-shadow-offset-x" type="i">
+      <default>2</default>
+      <range min="0" max="20"/>
+      <summary>Décalage horizontal de l'ombre</summary>
+      <description>Décalage horizontal de l'ombre en pixels.</description>
+    </key>
+    
+    <key name="cursor-shadow-offset-y" type="i">
+      <default>2</default>
+      <range min="0" max="20"/>
+      <summary>Décalage vertical de l'ombre</summary>
+      <description>Décalage vertical de l'ombre en pixels.</description>
+    </key>
+    
+    <key name="cursor-shadow-blur" type="d">
+      <default>3.0</default>
+      <range min="0" max="20" step="0.5"/>
+      <summary>Flou de l'ombre</summary>
+      <description>Niveau de flou de l'ombre en pixels.</description>
+    </key>
+    
+    <key name="cursor-shadow-opacity" type="d">
+      <default>0.5</default>
+      <range min="0.0" max="1.0" step="0.05"/>
+      <summary>Opacité de l'ombre</summary>
+      <description>Niveau d'opacité de l'ombre (0.0 = transparent, 1.0 = opaque).</description>
+    </key>
+    
+    <!-- Paramètres de journalisation -->
+    <key name="log-level" type="i">
+      <default>1</default>
+      <range min="0" max="4"/>
+      <summary>Niveau de journalisation</summary>
+      <description>Niveau de détail des logs (0=Erreur, 1=Avertissement, 2=Info, 3=Debug, 4=Trace)</description>
+    </key>
+    
+    <key name="log-to-file" type="b">
+      <default>true</default>
+      <summary>Journalisation dans un fichier</summary>
+      <description>Active ou désactive l'écriture des logs dans un fichier.</description>
+    </key>
+    
+    <key name="log-filename" type="s">
+      <default>"open-yolo.log"</default>
+      <summary>Nom du fichier de log</summary>
+      <description>Nom du fichier où seront enregistrés les logs.</description>
+    </key>
+    
+    <key name="log-max-size" type="i">
+      <default>5242880</default>
+      <range min="1048576" max="104857600"/>
+      <summary>Taille maximale du fichier de log</summary>
+      <description>Taille maximale en octets avant rotation des fichiers de log.</description>
+    </key>
+    
+    <key name="log-max-files" type="i">
+      <default>5</default>
+      <range min="1" max="20"/>
+      <summary>Nombre maximal de fichiers de log</summary>
+      <description>Nombre maximal de fichiers de log à conserver lors de la rotation.</description>
+    </key>
+  </schema>
+</schemalist>

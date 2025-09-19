@@ -1,4 +1,4 @@
-#include "displaymanager/DisplayManager.hpp"
+#include "include/displaymanager/DisplayManager.hpp"
 #include <gdkmm/display.h>
 #include <gdkmm/monitor.h>
 #include <iostream>

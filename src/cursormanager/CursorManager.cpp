@@ -1,5 +1,5 @@
-#include "cursormanager/CursorManager.hpp"
-#include "cursormanager/ShaderProgram.hpp"
+#include "include/cursormanager/CursorManager.hpp"
+#include "include/cursormanager/ShaderProgram.hpp"
 #include <SDL2/SDL_image.h>
 #include <gif_lib.h>
 #include <fstream>
@@ -10,6 +10,9 @@
 #include <algorithm>
 #include <array>
 #include <unordered_map>
+#include <chrono>
+#include <unistd.h>     // pour getpid(), close()
+#include <cstdlib>     // pour mkstemp()
 
 // Custom deleter for giflib's GifFileType
 struct GifFileDeleter {
@@ -153,6 +156,7 @@ bool CursorManager::Impl::initializeShaders() {
         uniform float intensity;
         uniform float size;
         uniform vec4 glowColor;
+        uniform float alpha;
         
         void main() {
             vec2 texOffset = 1.0 / textureSize(screenTexture, 0);
@@ -330,34 +334,68 @@ std::unique_ptr<ShaderProgram> CursorManager::Impl::loadShader(
     const std::string& vertexSrc, 
     const std::string& fragmentSrc) 
 {
-    // Créer des fichiers temporaires pour les shaders
-    std::string vertexFile = "/tmp/shader_vert.glsl";
-    std::string fragmentFile = "/tmp/shader_frag.glsl";
+    // Créer des fichiers temporaires sécurisés avec mkstemp
+    char vertexPath[] = "/tmp/shader_XXXXXX";
+    char fragmentPath[] = "/tmp/shader_XXXXXX";
     
-    // Écrire les sources dans des fichiers temporaires
-    std::ofstream vertFile(vertexFile);
-    vertFile << vertexSrc;
-    vertFile.close();
+    // Créer les fichiers temporaires et obtenir leurs descripteurs
+    int vfd = mkstemp(vertexPath);
+    int ffd = mkstemp(fragmentPath);
     
-    std::ofstream fragFile(fragmentFile);
-    fragFile << fragmentSrc;
-    fragFile.close();
-    
-    // Charger les shaders depuis les fichiers
-    auto shader = std::make_unique<ShaderProgram>();
-    if (!shader->loadFromFiles(vertexFile, fragmentFile)) {
-        std::cerr << "Failed to load shader from files" << std::endl;
-        // Supprimer les fichiers temporaires
-        std::remove(vertexFile.c_str());
-        std::remove(fragmentFile.c_str());
+    if (vfd == -1 || ffd == -1) {
+        std::cerr << "Erreur lors de la création des fichiers temporaires" << std::endl;
+        if (vfd != -1) close(vfd);
+        if (ffd != -1) close(ffd);
         return nullptr;
     }
     
-    // Supprimer les fichiers temporaires
-    std::remove(vertexFile.c_str());
-    std::remove(fragmentFile.c_str());
+    // Convertir les chemins en std::string
+    std::string vertexFile(vertexPath);
+    std::string fragmentFile(fragmentPath);
     
-    return shader;
+    // Fermer les descripteurs car nous allons utiliser les chemins avec ofstream
+    close(vfd);
+    close(ffd);
+    
+    // Write shader sources to temporary files
+    bool success = false;
+    std::ofstream vertFile(vertexFile);
+    if (vertFile.is_open()) {
+        vertFile << vertexSrc;
+        vertFile.close();
+        
+        std::ofstream fragFile(fragmentFile);
+        if (fragFile.is_open()) {
+            fragFile << fragmentSrc;
+            fragFile.close();
+            
+            // Load shaders from the temporary files
+            auto shader = std::make_unique<ShaderProgram>();
+            if (shader->loadFromFiles(vertexFile, fragmentFile)) {
+                success = true;
+                
+                // Clean up temporary files
+                std::remove(vertexFile.c_str());
+                std::remove(fragmentFile.c_str());
+                
+                return shader;
+            } else {
+                std::cerr << "Failed to load shader from files" << std::endl;
+            }
+            
+            // Clean up fragment file on failure
+            std::remove(fragmentFile.c_str());
+        } else {
+            std::cerr << "Failed to create fragment shader temporary file" << std::endl;
+        }
+        
+        // Clean up vertex file on failure
+        std::remove(vertexFile.c_str());
+    } else {
+        std::cerr << "Failed to create vertex shader temporary file" << std::endl;
+    }
+    
+    return nullptr;
 }
 
 bool CursorManager::Impl::initialize() {

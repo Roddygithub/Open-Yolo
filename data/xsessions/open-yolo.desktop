@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=OpenYolo
+Comment=This session logs you into OpenYolo
+Exec=open-yolo-session
+TryExec=open-yolo
+Icon=open-yolo
+Type=Application
+X-LightDM-DesktopName=OpenYolo
+DesktopNames=open-yolo
+Keywords=open-yolo;yolo;desktop;environment;
+X-Ubuntu-Gettext-Domain=open-yolo
+X-GDM-SessionRegisters=true

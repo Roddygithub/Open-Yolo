@@ -1,0 +1,15 @@
+[Unit]
+Description=OpenYolo - Gestionnaire de curseurs personnalisables
+After=network.target display-manager.service
+
+[Service]
+Type=simple
+User=%i
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/%i/.Xauthority
+ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/OpenYolo
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=graphical.target
