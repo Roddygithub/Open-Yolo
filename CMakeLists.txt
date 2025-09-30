@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 
 # Configuration du projet
 project(OpenYolo
-    VERSION 1.0.0
+    VERSION 1.0.1
     DESCRIPTION "Gestionnaire de curseurs personnalisés pour Linux"
     LANGUAGES CXX C
 )
