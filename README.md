@@ -13,10 +13,10 @@
 ## 🚀 Fonctionnalités
 
 ### Version 1.0.0 - Première Version Stable
-- ✅ **Production-ready** : Testé sur Ubuntu, Fedora et Arch Linux
+- ✅ **Production-ready** : Testé sur Ubuntu, Fedora, Arch Linux et NixOS
 - ✅ **Performances optimales** : < 1% CPU en idle, ~50-90 MB RAM
 - ✅ **Tests complets** : Couverture > 70%, tous les tests passent
-- ✅ **Packaging professionnel** : DEB, RPM, PKGBUILD disponibles
+- ✅ **Packaging professionnel** : DEB, RPM, PKGBUILD, Nix Flake disponibles
 - ✅ **Documentation complète** : Guides d'installation et de compilation
 
 ### Principales fonctionnalités
@@ -139,27 +139,83 @@ Ce projet est conçu spécifiquement pour les environnements Linux et utilise de
    sudo dnf install ./open-yolo-*.rpm
    ```
 
-### Méthode 3 : Paquets précompilés (utilisateurs finaux)
+### Méthode 3 : Installation sous NixOS (avec Flakes)
 
-Des paquets pour différentes distributions sont disponibles dans la section [Releases](https://github.com/yourusername/Open-Yolo/releases).
+Open-Yolo supporte maintenant NixOS via Nix Flakes pour une installation déclarative et reproductible.
+
+#### Installation directe :
+```bash
+# Cloner le dépôt
+git clone https://github.com/Roddygithub/Open-Yolo.git
+cd Open-Yolo
+
+# Compiler et installer
+nix build
+
+# Exécuter
+nix run .#open-yolo
+```
+
+#### Ajouter à votre configuration NixOS :
+```nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    open-yolo.url = "github:Roddygithub/Open-Yolo";
+  };
+
+  outputs = { self, nixpkgs, open-yolo }: {
+    nixosConfigurations.your-hostname = nixpkgs.lib.nixosSystem {
+      modules = [
+        {
+          environment.systemPackages = [
+            open-yolo.packages.x86_64-linux.default
+          ];
+        }
+      ];
+    };
+  };
+}
+```
+
+#### Environnement de développement :
+```bash
+# Entrer dans le shell de développement
+nix develop
+
+# Compiler manuellement
+cmake -B build -DCMAKE_BUILD_TYPE=Debug
+cmake --build build
+```
+
+### Méthode 4 : Paquets précompilés (utilisateurs finaux)
+
+Des paquets pour différentes distributions sont disponibles dans la section [Releases](https://github.com/Roddygithub/Open-Yolo/releases).
 
 #### Pour Debian/Ubuntu :
 ```bash
 # Télécharger le fichier .deb
-wget https://github.com/yourusername/Open-Yolo/releases/download/v0.3.0/open-yolo_0.3.0_amd64.deb
+wget https://github.com/Roddygithub/Open-Yolo/releases/download/v1.0.0/open-yolo_1.0.0_amd64.deb
 
 # Installer le paquet
-sudo dpkg -i open-yolo_0.3.0_amd64.deb
+sudo dpkg -i open-yolo_1.0.0_amd64.deb
 sudo apt-get install -f  # Pour installer les dépendances manquantes
 ```
 
 #### Pour Fedora :
 ```bash
 # Télécharger le fichier .rpm
-wget https://github.com/yourusername/Open-Yolo/releases/download/v0.3.0/open-yolo-0.3.0-1.x86_64.rpm
+wget https://github.com/Roddygithub/Open-Yolo/releases/download/v1.0.0/open-yolo-1.0.0-1.x86_64.rpm
 
 # Installer le paquet
-sudo dnf install open-yolo-0.3.0-1.x86_64.rpm
+sudo dnf install open-yolo-1.0.0-1.x86_64.rpm
+```
+
+#### Pour Arch Linux :
+```bash
+# Utiliser le PKGBUILD fourni
+wget https://github.com/Roddygithub/Open-Yolo/releases/download/v1.0.0/PKGBUILD
+makepkg -si
 ```
 
 ### Sous Windows

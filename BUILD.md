@@ -78,6 +78,28 @@ sudo pacman -S --needed \
     cairomm
 ```
 
+### NixOS
+
+Open-Yolo supporte NixOS via Nix Flakes. Les dépendances sont gérées automatiquement.
+
+```bash
+# Cloner le dépôt
+git clone https://github.com/Roddygithub/Open-Yolo.git
+cd Open-Yolo
+
+# Compiler avec Nix
+nix build
+
+# Ou entrer dans un shell de développement
+nix develop
+```
+
+Le flake inclut toutes les dépendances nécessaires :
+- GTKmm 3
+- SDL2 et SDL2_image
+- OpenGL et GLEW
+- Bibliothèques X11 (libX11, libXext, libXfixes, libXi, libXrandr, libXcursor)
+
 ## Compilation rapide
 
 ```bash

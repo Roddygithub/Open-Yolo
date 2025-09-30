@@ -66,6 +66,25 @@ ninja
 ./src/OpenYolo
 ```
 
+### NixOS
+
+```bash
+# Option A : Installation directe avec Nix Flakes
+git clone https://github.com/Roddygithub/Open-Yolo.git
+cd Open-Yolo
+nix build
+nix run .#open-yolo
+
+# Option B : Essayer sans installer
+nix run github:Roddygithub/Open-Yolo
+
+# Option C : Shell de développement
+nix develop
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+./build/src/OpenYolo
+```
+
 ---
 
 ## 🐳 Avec Docker (toutes distributions)

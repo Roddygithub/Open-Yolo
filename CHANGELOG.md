@@ -37,6 +37,7 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 - **Packaging** :
   - Support CPack (DEB, RPM, TGZ)
   - PKGBUILD pour Arch Linux
+  - **Nix Flake pour NixOS** : Installation déclarative et reproductible
   - Script automatique de génération de paquets
 
 #### CI/CD

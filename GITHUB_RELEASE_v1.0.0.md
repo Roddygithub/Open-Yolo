@@ -49,6 +49,7 @@
 | `open-yolo-1.0.0-1.x86_64.rpm` | Fedora/RHEL | ~2 MB | Paquet RPM avec métadonnées |
 | `open-yolo-1.0.0-Linux.tar.gz` | Générique | ~3 MB | Archive portable |
 | `PKGBUILD` | Arch Linux | - | Build depuis les sources |
+| `flake.nix` | **NixOS** | - | **Nix Flake pour installation déclarative** |
 
 ### Documentation Incluse
 
@@ -101,6 +102,22 @@ makepkg -si
 
 # Lancer
 OpenYolo
+```
+
+### NixOS (avec Nix Flakes)
+
+```bash
+# Option 1 : Installation directe
+git clone https://github.com/Roddygithub/Open-Yolo.git
+cd Open-Yolo
+nix build
+nix run .#open-yolo
+
+# Option 2 : Essayer sans installer
+nix run github:Roddygithub/Open-Yolo
+
+# Option 3 : Ajouter à votre configuration NixOS
+# Voir README.md pour les détails
 ```
 
 ### Archive Générique (Toutes Distributions)
@@ -185,6 +202,13 @@ sudo pacman -S --needed \
     base-devel cmake ninja git \
     gtkmm3 sdl2 sdl2_image mesa glew giflib \
     libx11 libxrandr libxcursor cairo cairomm
+```
+
+#### NixOS
+```bash
+# Aucune dépendance manuelle requise
+# Nix Flake gère automatiquement toutes les dépendances
+nix build
 ```
 
 ### Build Rapide
