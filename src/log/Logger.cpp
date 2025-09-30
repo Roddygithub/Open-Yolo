@@ -1,17 +1,25 @@
 #include "../../include/log/Logger.hpp"
+
+// Standard C++
+#include <algorithm>
+#include <chrono>
+#include <cstdlib>
+#include <cstring>
 #include <ctime>
+#include <filesystem>
+#include <fstream>
 #include <iomanip>
+#include <iostream>
+#include <mutex>
 #include <sstream>
 #include <stdexcept>
+#include <string>
 #include <thread>
-#include <mutex>
-#include <filesystem>
-#include <algorithm>
-#include <cstring>
-#include <cstdlib>
+
+// POSIX
+#include <pwd.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <pwd.h>
 
 namespace fs = std::filesystem;
 

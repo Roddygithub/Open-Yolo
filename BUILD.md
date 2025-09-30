@@ -1,6 +1,6 @@
 # Guide de Compilation - Open-Yolo
 
-Ce guide détaille les étapes pour compiler Open-Yolo depuis les sources.
+Ce guide détaille les étapes pour compiler Open-Yolo depuis les sources avec le support de C++17.
 
 ## Table des matières
 
@@ -13,6 +13,37 @@ Ce guide détaille les étapes pour compiler Open-Yolo depuis les sources.
 - [Dépannage](#dépannage)
 
 ## Prérequis
+
+### CachyOS (Arch Linux)
+
+```bash
+# Mise à jour du système
+sudo pacman -Syu
+
+# Installation des dépendances
+sudo pacman -S --needed \
+    base-devel \
+    cmake \
+    ninja \
+    pkgconf \
+    git \
+    gtkmm3 \
+    sdl2 \
+    sdl2_image \
+    glew \
+    giflib \
+    xorg-server-devel \
+    libxcb \
+    cairo \
+    cairomm \
+    glm \
+    gcc \
+    gcc-libs \
+    gcc-fortran
+
+# Vérification de la version de GCC (doit être >= 13.2.1)
+gcc --version
+```
 
 ### Ubuntu/Debian
 
@@ -33,7 +64,8 @@ sudo apt-get install -y \
     xorg-dev \
     libx11-xcb-dev \
     libcairo2-dev \
-    libcairomm-1.0-dev
+    libcairomm-1.0-dev \
+    libglm-dev
 ```
 
 ### Fedora/RHEL
@@ -48,6 +80,18 @@ sudo dnf install -y \
     gtkmm30-devel \
     SDL2-devel \
     SDL2_image-devel \
+    glm-devel
+```
+
+## Configuration requise
+
+- **GCC 13.2.1** ou version ultérieure (recommandé pour C++17)
+- **CMake 3.15** ou version ultérieure
+- **GTKmm 3.24** ou version ultérieure
+- **SDL2 2.0.14** ou version ultérieure
+- **GLEW 2.2.0** ou version ultérieure
+- **GLM 0.9.9.8** ou version ultérieure
+- **GIFLIB 5.2.1** ou version ultérieure
     mesa-libGL-devel \
     glew-devel \
     giflib-devel \
@@ -103,17 +147,50 @@ Le flake inclut toutes les dépendances nécessaires :
 ## Compilation rapide
 
 ```bash
+## Compilation rapide (CachyOS/Arch Linux)
+
+```bash
 # Cloner le dépôt
 git clone https://github.com/Roddygithub/Open-Yolo.git
 cd Open-Yolo
 
-# Compiler
-mkdir build && cd build
-cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release
-ninja
+# Configuration et compilation
+mkdir -p build && cd build
+cmake .. -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_CXX_STANDARD=17 \
+    -DCMAKE_CXX_STANDARD_REQUIRED=ON \
+    -DCMAKE_CXX_EXTENSIONS=OFF
 
-# Installer (optionnel)
+# Compilation avec optimisation
+ninja -j$(nproc)
+
+# Installation (optionnel)
 sudo ninja install
+
+# Lancer l'application
+./src/OpenYolo
+```
+
+### Pour une installation système complète (recommandé pour les utilisateurs finaux) :
+
+```bash
+# Installation des dépendances système
+sudo pacman -S --needed base-devel cmake ninja pkgconf git gtkmm3 sdl2 sdl2_image glew giflib xorg-server-devel libxcb cairo cairomm glm
+
+# Configuration avec les chemins système
+cmake .. -G Ninja \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_CXX_STANDARD=17 \
+    -DCMAKE_CXX_STANDARD_REQUIRED=ON \
+    -DENABLE_LOGGING=ON \
+    -DENABLE_LTO=ON
+
+# Compilation et installation
+ninja -j$(nproc)
+sudo ninja install
+```
 ```
 
 ## Compilation détaillée

@@ -1,14 +1,21 @@
 #include "../../include/config/ConfigManager.hpp"
+
+// Standard C++
+#include <algorithm>
+#include <cstdlib>
+#include <filesystem>
 #include <fstream>
+#include <map>
+#include <mutex>
 #include <sstream>
 #include <stdexcept>
-#include <mutex>
-#include <filesystem>
-#include <cstdlib>
+#include <string>
+
+// POSIX
 #include <pwd.h>
-#include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 namespace fs = std::filesystem;
 

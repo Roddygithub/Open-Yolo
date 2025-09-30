@@ -1,11 +1,16 @@
 #include "displaymanager/DisplayManager.hpp"
-#include <X11/Xlib.h>
-#include <X11/extensions/Xrandr.h>
+
+// Standard C++
+#include <cerrno>   // Pour errno
+#include <cstring>  // Pour std::strerror
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
-#include <cstring>  // Pour std::strerror
-#include <cerrno>   // Pour errno
+#include <vector>
+
+// X11
+#include <X11/Xlib.h>
+#include <X11/extensions/Xrandr.h>
 
 struct DisplayManager::Impl {
     std::vector<DisplayInfo> displays;

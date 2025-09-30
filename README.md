@@ -40,14 +40,26 @@
 ## 📋 Prérequis
 
 ### Distribution Linux
-- **Système d'exploitation** : Testé sur Ubuntu 22.04+ et Fedora 36+
+- **Système d'exploitation** : Testé sur CachyOS, Arch Linux, Ubuntu 22.04+ et Fedora 36+
 - **CMake** : 3.15 ou supérieur
-- **Compilateur C++** : g++ 11+ ou clang 14+
-- **Dépendances système** :
-  ```bash
-  # Pour les distributions basées sur Debian/Ubuntu
-  sudo apt-get update
-  sudo apt-get install -y \
+- **Compilateur C++** : g++ 13.2.1+ (recommandé pour C++17) ou clang 16+
+- **Standard C++** : C++17 requis
+
+### Dépendances système
+
+#### CachyOS/Arch Linux
+```bash
+sudo pacman -S --needed \
+    base-devel cmake ninja pkgconf git \
+    gtkmm3 sdl2 sdl2_image \
+    glew giflib xorg-server-devel \
+    libxcb cairo cairomm glm
+```
+
+#### Ubuntu/Debian
+```bash
+sudo apt-get update
+sudo apt-get install -y \
       build-essential \
       cmake \
       git \

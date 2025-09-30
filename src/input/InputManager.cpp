@@ -1,16 +1,24 @@
 #include "../../include/input/InputManager.hpp"
 #include "../../include/gui/MainWindow.hpp"
+
+// Standard C++
+#include <algorithm> // Pour std::find_if
 #include <iostream>
+#include <memory>
 #include <sstream>
-#include <gtkmm/application.h>
-#include <gtkmm/window.h>
-#include <gdkmm/display.h>
-#include <gdkmm/device.h>
-#include <gdkmm/displaymanager.h>
-#include <gdkmm/seat.h>
+#include <string>
+#include <unordered_map>
+
+// GTKmm
 #include <gdk/gdk.h> // Pour les constantes GDK
 #include <gdk/gdkx.h> // Pour les fonctions X11
-#include <algorithm> // Pour std::find_if
+#include <gdkmm/device.h>
+#include <gdkmm/display.h>
+#include <gdkmm/displaymanager.h>
+#include <gdkmm/seat.h>
+#include <glibmm/ustring.h>
+#include <gtkmm/application.h>
+#include <gtkmm/window.h>
 
 InputManager::InputManager() 
     : mainWindow_(nullptr) {

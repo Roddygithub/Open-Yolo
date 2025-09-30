@@ -17,6 +17,24 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# Détection du compilateur
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "13.2.1")
+        message(WARNING "GCC version ${CMAKE_CXX_COMPILER_VERSION} is older than the recommended 13.2.1 for C++17 support")
+    endif()
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "16.0.0")
+        message(WARNING "Clang version ${CMAKE_CXX_COMPILER_VERSION} is older than the recommended 16.0.0 for full C++17 support")
+    endif()
+endif()
+
+# Détection de CachyOS/Arch Linux
+if (EXISTS "/etc/arch-release")
+    set(ARCH_LINUX TRUE)
+    message(STATUS "Arch Linux/CachyOS detected")
+    add_definitions(-DARCH_LINUX)
+endif()
+
 # Options de construction
 option(ENABLE_LOGGING "Activer les logs de débogage" ON)
 option(ENABLE_WARNINGS_AS_ERRORS "Traiter les avertissements comme des erreurs" ON)

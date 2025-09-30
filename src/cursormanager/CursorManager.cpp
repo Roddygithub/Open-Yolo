@@ -1,18 +1,36 @@
 #include "../../include/cursormanager/CursorManager.hpp"
 #include "../../include/cursormanager/ShaderProgram.hpp"
-#include <SDL2/SDL_image.h>
-#include <gif_lib.h>
-#include <fstream>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <cstring>
-#include <stdexcept>
+
+// Standard C++
 #include <algorithm>
 #include <array>
-#include <unordered_map>
 #include <chrono>
+#include <cstdlib>
+#include <cstring>
+#include <fstream>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+// OpenGL
+#include <GL/glew.h>
+#include <GL/gl.h>
+
+// GLM
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+// SDL2
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
+
+// giflib
+#include <gif_lib.h>
+
+// POSIX
 #include <unistd.h>     // pour getpid(), close()
-#include <cstdlib>     // pour mkstemp()
 
 // Custom deleter for giflib's GifFileType
 struct GifFileDeleter {
