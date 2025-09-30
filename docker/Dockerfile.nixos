@@ -1,0 +1,15 @@
+FROM nixos/nix:latest
+
+# Enable flakes
+RUN echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
+
+WORKDIR /workspace
+
+# Copy project files
+COPY . /workspace/
+
+# Build with Nix
+RUN nix build -L --show-trace
+
+# Run tests
+CMD ["sh", "-c", "nix develop --command bash -c 'cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON && cmake --build build -j$(nproc) && cd build && ctest --output-on-failure --verbose'"]

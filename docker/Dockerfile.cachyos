@@ -1,0 +1,40 @@
+FROM cachyos/cachyos:latest
+
+# Update system and install dependencies
+RUN pacman -Syu --noconfirm && \
+    pacman -S --noconfirm \
+    base-devel \
+    cmake \
+    ninja \
+    git \
+    gtkmm3 \
+    sdl2 \
+    sdl2_image \
+    mesa \
+    glew \
+    giflib \
+    libx11 \
+    libxrandr \
+    libxcursor \
+    cairo \
+    cairomm \
+    gtest \
+    xorg-server-xvfb \
+    xorg-xauth \
+    && pacman -Scc --noconfirm
+
+WORKDIR /workspace
+
+# Copy project files
+COPY . /workspace/
+
+# Build
+RUN cmake -B build \
+    -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_TESTS=ON \
+    -DENABLE_LOGGING=ON && \
+    cmake --build build -j$(nproc)
+
+# Test entrypoint
+CMD ["sh", "-c", "Xvfb :99 -screen 0 1024x768x24 & export DISPLAY=:99 && sleep 2 && cd build && ctest --output-on-failure --verbose"]

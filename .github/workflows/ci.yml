@@ -1,0 +1,401 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ created ]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  # ============================================
+  # Tests Multi-Distributions Linux
+  # ============================================
+  test-linux:
+    name: Test on ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            container: ubuntu:22.04
+            name: "Ubuntu 22.04 LTS"
+          - os: ubuntu-24.04
+            container: ubuntu:24.04
+            name: "Ubuntu 24.04 LTS"
+          - os: fedora-latest
+            container: fedora:latest
+            name: "Fedora Latest"
+          - os: archlinux
+            container: archlinux:latest
+            name: "Arch Linux"
+          - os: cachyos
+            container: cachyos/cachyos:latest
+            name: "CachyOS"
+    
+    container:
+      image: ${{ matrix.container }}
+    
+    steps:
+    - name: Install Git (Ubuntu/Debian)
+      if: startsWith(matrix.container, 'ubuntu')
+      run: |
+        apt-get update
+        apt-get install -y git
+
+    - name: Install Git (Fedora)
+      if: startsWith(matrix.container, 'fedora')
+      run: dnf install -y git
+
+    - name: Install Git (Arch)
+      if: startsWith(matrix.container, 'archlinux')
+      run: pacman -Sy --noconfirm git
+
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies (Ubuntu/Debian)
+      if: startsWith(matrix.container, 'ubuntu')
+      run: |
+        apt-get update
+        DEBIAN_FRONTEND=noninteractive apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          pkg-config \
+          libgtkmm-3.0-dev \
+          libsdl2-dev \
+          libsdl2-image-dev \
+          libgl1-mesa-dev \
+          libglew-dev \
+          libgif-dev \
+          xorg-dev \
+          libx11-xcb-dev \
+          libcairo2-dev \
+          libcairomm-1.0-dev \
+          libgtest-dev \
+          xvfb \
+          xauth
+
+    - name: Install dependencies (Fedora)
+      if: startsWith(matrix.container, 'fedora')
+      run: |
+        dnf install -y \
+          gcc-c++ \
+          cmake \
+          ninja-build \
+          pkgconf-pkg-config \
+          gtkmm30-devel \
+          SDL2-devel \
+          SDL2_image-devel \
+          mesa-libGL-devel \
+          glew-devel \
+          giflib-devel \
+          xorg-x11-server-devel \
+          libxcb-devel \
+          cairo-devel \
+          cairomm-devel \
+          gtest-devel \
+          xorg-x11-server-Xvfb \
+          xorg-x11-xauth
+
+    - name: Install dependencies (Arch)
+      if: startsWith(matrix.container, 'archlinux')
+      run: |
+        pacman -Sy --noconfirm \
+          base-devel \
+          cmake \
+          ninja \
+          gtkmm3 \
+          sdl2 \
+          sdl2_image \
+          mesa \
+          glew \
+          giflib \
+          libx11 \
+          libxrandr \
+          libxcursor \
+          cairo \
+          cairomm \
+          gtest \
+          xorg-server-xvfb \
+          xorg-xauth
+
+    - name: Configure CMake
+      run: |
+        cmake -B build \
+          -G Ninja \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DBUILD_TESTS=ON \
+          -DENABLE_LOGGING=ON \
+          -DENABLE_LTO=OFF
+
+    - name: Build
+      run: cmake --build build --config ${{ env.BUILD_TYPE }} -j$(nproc)
+
+    - name: Run tests with Xvfb
+      run: |
+        Xvfb :99 -screen 0 1024x768x24 &
+        export DISPLAY=:99
+        sleep 2
+        cd build && ctest --output-on-failure --verbose
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results-${{ matrix.os }}
+        path: build/test_results/
+
+  # ============================================
+  # Build et Test Windows (WSL)
+  # ============================================
+  test-windows:
+    name: Test on Windows (WSL Ubuntu)
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup WSL
+      uses: Vampire/setup-wsl@v3
+      with:
+        distribution: Ubuntu-22.04
+
+    - name: Install dependencies in WSL
+      shell: wsl-bash {0}
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          pkg-config \
+          libgtkmm-3.0-dev \
+          libsdl2-dev \
+          libsdl2-image-dev \
+          libgl1-mesa-dev \
+          libglew-dev \
+          libgif-dev \
+          xorg-dev \
+          libx11-xcb-dev \
+          libcairo2-dev \
+          libcairomm-1.0-dev \
+          libgtest-dev \
+          xvfb
+
+    - name: Build in WSL
+      shell: wsl-bash {0}
+      run: |
+        cmake -B build \
+          -G Ninja \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DBUILD_TESTS=ON \
+          -DENABLE_LOGGING=ON
+        cmake --build build -j$(nproc)
+
+    - name: Run tests in WSL
+      shell: wsl-bash {0}
+      run: |
+        Xvfb :99 -screen 0 1024x768x24 &
+        export DISPLAY=:99
+        sleep 2
+        cd build && ctest --output-on-failure
+
+  # ============================================
+  # Test NixOS
+  # ============================================
+  test-nixos:
+    name: Test on NixOS
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Nix
+      uses: cachix/install-nix-action@v26
+      with:
+        nix_path: nixpkgs=channel:nixos-unstable
+        extra_nix_config: |
+          experimental-features = nix-command flakes
+
+    - name: Build with Nix
+      run: nix build -L
+
+    - name: Check flake
+      run: nix flake check
+
+  # ============================================
+  # Code Quality & Coverage
+  # ============================================
+  code-quality:
+    name: Code Quality & Coverage
+    runs-on: ubuntu-22.04
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          pkg-config \
+          libgtkmm-3.0-dev \
+          libsdl2-dev \
+          libsdl2-image-dev \
+          libgl1-mesa-dev \
+          libglew-dev \
+          libgif-dev \
+          xorg-dev \
+          libx11-xcb-dev \
+          libcairo2-dev \
+          libcairomm-1.0-dev \
+          libgtest-dev \
+          lcov \
+          xvfb
+
+    - name: Configure with coverage
+      run: |
+        cmake -B build \
+          -G Ninja \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DBUILD_TESTS=ON \
+          -DENABLE_COVERAGE=ON \
+          -DENABLE_LOGGING=ON
+
+    - name: Build
+      run: cmake --build build -j$(nproc)
+
+    - name: Run tests with coverage
+      run: |
+        Xvfb :99 -screen 0 1024x768x24 &
+        export DISPLAY=:99
+        sleep 2
+        cd build && ctest --output-on-failure
+
+    - name: Generate coverage report
+      run: |
+        cd build
+        lcov --capture --directory . --output-file coverage.info
+        lcov --remove coverage.info '/usr/*' '*/tests/*' --output-file coverage.info
+        lcov --list coverage.info
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./build/coverage.info
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  # ============================================
+  # Package Generation
+  # ============================================
+  package:
+    name: Generate Packages
+    needs: [test-linux, test-windows, test-nixos]
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'release'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          pkg-config \
+          libgtkmm-3.0-dev \
+          libsdl2-dev \
+          libsdl2-image-dev \
+          libgl1-mesa-dev \
+          libglew-dev \
+          libgif-dev \
+          xorg-dev \
+          libx11-xcb-dev \
+          libcairo2-dev \
+          libcairomm-1.0-dev \
+          rpm \
+          alien
+
+    - name: Build Release
+      run: |
+        cmake -B build \
+          -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_TESTS=OFF \
+          -DENABLE_LTO=ON
+        cmake --build build -j$(nproc)
+
+    - name: Generate packages
+      run: |
+        cd build
+        cpack -G DEB
+        cpack -G RPM
+        cpack -G TGZ
+
+    - name: Upload DEB package
+      uses: actions/upload-artifact@v4
+      with:
+        name: deb-package
+        path: build/*.deb
+
+    - name: Upload RPM package
+      uses: actions/upload-artifact@v4
+      with:
+        name: rpm-package
+        path: build/*.rpm
+
+    - name: Upload TGZ package
+      uses: actions/upload-artifact@v4
+      with:
+        name: tgz-package
+        path: build/*.tar.gz
+
+    - name: Upload to Release
+      if: github.event_name == 'release'
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          build/*.deb
+          build/*.rpm
+          build/*.tar.gz
+          PKGBUILD
+          flake.nix
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ============================================
+  # Update Build Badge
+  # ============================================
+  update-badge:
+    name: Update Build Badge
+    needs: [test-linux, test-windows, test-nixos, code-quality]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Create badge
+      uses: schneegans/dynamic-badges-action@v1.7.0
+      with:
+        auth: ${{ secrets.GIST_SECRET }}
+        gistID: your-gist-id
+        filename: openyolo-build-badge.json
+        label: Build
+        message: Passing
+        color: brightgreen

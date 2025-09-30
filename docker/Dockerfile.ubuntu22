@@ -1,0 +1,41 @@
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    ninja-build \
+    pkg-config \
+    git \
+    libgtkmm-3.0-dev \
+    libsdl2-dev \
+    libsdl2-image-dev \
+    libgl1-mesa-dev \
+    libglew-dev \
+    libgif-dev \
+    xorg-dev \
+    libx11-xcb-dev \
+    libcairo2-dev \
+    libcairomm-1.0-dev \
+    libgtest-dev \
+    xvfb \
+    xauth \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+
+# Copy project files
+COPY . /workspace/
+
+# Build
+RUN cmake -B build \
+    -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_TESTS=ON \
+    -DENABLE_LOGGING=ON && \
+    cmake --build build -j$(nproc)
+
+# Test entrypoint
+CMD ["sh", "-c", "Xvfb :99 -screen 0 1024x768x24 & export DISPLAY=:99 && sleep 2 && cd build && ctest --output-on-failure --verbose"]
