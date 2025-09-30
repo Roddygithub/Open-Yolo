@@ -11,6 +11,13 @@
 
 > **🎉 Version 1.0.0 disponible !** Première version stable pour Linux avec curseurs animés, multi-écrans, HiDPI et rendu GPU optimisé (< 1% CPU).
 
+## 📚 Documentation Rapide
+
+- **[🚀 Démarrage Rapide](QUICK_START.md)** - Installation en 5 minutes
+- **[🔨 Guide de Compilation](BUILD.md)** - Compiler depuis les sources
+- **[🧪 Guide de Tests](TESTING.md)** - Tester sur toutes les plateformes
+- **[📦 Télécharger v1.0.0](https://github.com/Roddygithub/Open-Yolo/releases/latest)** - Packages prêts à installer
+
 ## 🚀 Fonctionnalités
 
 ### Version 1.0.0 - Première Version Stable
