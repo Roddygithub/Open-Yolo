@@ -2,7 +2,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Latest Release](https://img.shields.io/github/v/release/Roddygithub/Open-Yolo)](https://github.com/Roddygithub/Open-Yolo/releases/latest)
-[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](https://github.com/Roddygithub/Open-Yolo/actions)
+[![CI/CD Pipeline](https://github.com/Roddygithub/Open-Yolo/actions/workflows/ci.yml/badge.svg)](https://github.com/Roddygithub/Open-Yolo/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/Roddygithub/Open-Yolo/branch/main/graph/badge.svg)](https://codecov.io/gh/Roddygithub/Open-Yolo)
 [![Platform: Linux](https://img.shields.io/badge/Platform-Linux-lightgrey.svg)](https://www.linux.org/)
 [![Downloads](https://img.shields.io/github/downloads/Roddygithub/Open-Yolo/total)](https://github.com/Roddygithub/Open-Yolo/releases)
 
@@ -13,11 +14,11 @@
 ## 🚀 Fonctionnalités
 
 ### Version 1.0.0 - Première Version Stable
-- ✅ **Production-ready** : Testé sur Ubuntu, Fedora, Arch Linux et NixOS
+- ✅ **Production-ready** : Testé automatiquement sur Ubuntu 22/24, Fedora, Arch, CachyOS, Windows (WSL) et NixOS
 - ✅ **Performances optimales** : < 1% CPU en idle, ~50-90 MB RAM
-- ✅ **Tests complets** : Couverture > 70%, tous les tests passent
-- ✅ **Packaging professionnel** : DEB, RPM, PKGBUILD, Nix Flake disponibles
-- ✅ **Documentation complète** : Guides d'installation et de compilation
+- ✅ **Tests complets** : Couverture > 70%, CI/CD automatisé avec GitHub Actions
+- ✅ **Packaging professionnel** : DEB, RPM, TGZ, PKGBUILD, Nix Flake disponibles
+- ✅ **Documentation complète** : Guides d'installation, compilation et tests
 
 ### Principales fonctionnalités
 - 🖱️ Curseurs personnalisés animés (GIF ou images)
@@ -386,6 +387,39 @@ sudo dnf install ./open-yolo-*.rpm
    sudo dnf install giflib-devel  # Fedora
    ```
 
+## 🧪 Tests
+
+Open-Yolo dispose d'une suite complète de tests automatisés sur toutes les plateformes supportées.
+
+### Tests Automatisés (CI/CD)
+
+Chaque commit et pull request est automatiquement testé sur :
+- Ubuntu 22.04 LTS & 24.04 LTS
+- Fedora Latest
+- Arch Linux
+- CachyOS
+- Windows (WSL Ubuntu)
+- NixOS
+
+**Voir les résultats :** [GitHub Actions](https://github.com/Roddygithub/Open-Yolo/actions)
+
+### Tests Locaux
+
+```bash
+# Tester toutes les plateformes avec Docker
+./scripts/test-all-platforms.sh  # Linux/macOS
+.\scripts\test-all-platforms.ps1  # Windows
+
+# Tests unitaires manuels
+cmake -B build -DBUILD_TESTS=ON
+cmake --build build
+cd build && ctest --output-on-failure
+```
+
+**Documentation complète :** Voir [TESTING.md](TESTING.md)
+
+---
+
 ## 🤝 Contribution
 
 Les contributions sont les bienvenues ! Voici comment contribuer :
@@ -395,6 +429,8 @@ Les contributions sont les bienvenues ! Voici comment contribuer :
 3. Committez vos changements (`git commit -m 'Add some AmazingFeature'`)
 4. Poussez vers la branche (`git push origin feature/AmazingFeature`)
 5. Ouvrez une Pull Request
+
+**Note :** Les tests CI/CD se lanceront automatiquement sur votre PR.
 
 ## 📄 Licence
 
