@@ -1,20 +1,17 @@
-# Fichier CMake pour le module Input
+# Fichier CMake pour le module d'entrée
 
-# Version minimale requise de CMake
-cmake_minimum_required(VERSION 3.15)
-
-# Définir les sources du module
-set(SOURCES
+# Définir les sources
+set(INPUT_SOURCES
     InputManager.cpp
 )
 
-# Créer une bibliothèque statique pour ce module
-add_library(input STATIC ${SOURCES})
+# Créer la bibliothèque
+add_library(input ${INPUT_SOURCES})
 
-# Définir les propriétés de la cible
-target_include_directories(input PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/include/input
+# Définir les propriétés
+target_include_directories(input PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
     ${SDL2_INCLUDE_DIRS}
     ${X11_INCLUDE_DIRS}
 )
@@ -23,14 +20,7 @@ target_include_directories(input PRIVATE
 target_link_libraries(input PRIVATE
     ${SDL2_LIBRARIES}
     ${X11_LIBRARIES}
-)
-
-# Définir les propriétés de compilation
-target_compile_features(input PRIVATE cxx_std_20)
-set_target_properties(input PROPERTIES
-    CXX_STANDARD 20
-    CXX_STANDARD_REQUIRED ON
-    CXX_EXTENSIONS OFF
+    ${CMAKE_THREAD_LIBS_INIT}
 )
 
 # Installation de la bibliothèque
@@ -38,10 +28,4 @@ install(TARGETS input
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
-
-# Installation des en-têtes
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/input/
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/input
-    FILES_MATCHING PATTERN "*.hpp"
 )

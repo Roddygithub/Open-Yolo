@@ -91,7 +91,12 @@ public:
     
     // Gestion de l'échelle et de l'animation
     void setScale(float scale);
+    void setSize(float size);  // Alias pour setScale
     void setAnimationSpeed(int fps);
+    
+    // Activation/désactivation du curseur personnalisé
+    void setEnabled(bool enabled);
+    bool isEnabled() const;
     
     // Optimisation
     void optimizeGPUMemory();
@@ -117,7 +122,7 @@ private:
         void setFps(int fps) { 
             if (fps > 0) targetFps = fps; 
         }
-        void setAlpha(float a) { alpha = std::clamp(a, 0.0f, 1.0f); }
+        void setAlpha(float a) { alpha = (a < 0.0f) ? 0.0f : (a > 1.0f) ? 1.0f : a; }
         void setEffectsEnabled(bool enabled) { effectsEnabled = enabled; }
         void loadCursor(const std::string& path);
         void optimizeGPUMemory();
@@ -132,6 +137,8 @@ private:
         
         // Gestion de l'échelle
         void setScale(float scale) { scale_ = scale; }
+        void setEnabled(bool enabled) { isVisible = enabled; }
+        bool isEnabled() const { return isVisible; }
 
     private:
         // Méthodes privées

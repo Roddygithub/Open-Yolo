@@ -1,0 +1,132 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  release:
+    types: [ created ]
+
+jobs:
+  build-linux:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-20.04]
+        build_type: [Release, Debug]
+        
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          pkg-config \
+          libgtkmm-3.0-dev \
+          libsdl2-dev \
+          libsdl2-image-dev \
+          libgl1-mesa-dev \
+          libglew-dev \
+          libgif-dev \
+          xorg-dev \
+          libx11-xcb-dev \
+          libgtest-dev \
+          libgmock-dev
+          
+    - name: Configure CMake
+      run: |
+        cmake -B build -G Ninja \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          -DCMAKE_INSTALL_PREFIX=/usr \
+          -DENABLE_LOGGING=ON \
+          -DBUILD_TESTS=ON \
+          -DENABLE_COVERAGE=${{ matrix.build_type == 'Debug' && 'ON' || 'OFF' }}
+          
+    - name: Build
+      run: cmake --build build --parallel
+      
+    - name: Run tests
+      run: |
+        cd build
+        ctest --output-on-failure --parallel
+        
+    - name: Generate coverage report
+      if: matrix.build_type == 'Debug' && matrix.os == 'ubuntu-22.04'
+      run: |
+        sudo apt-get install -y lcov
+        lcov --capture --directory build --output-file coverage.info
+        lcov --remove coverage.info '/usr/*' --output-file coverage.info
+        lcov --list coverage.info
+        
+    - name: Upload coverage to Codecov
+      if: matrix.build_type == 'Debug' && matrix.os == 'ubuntu-22.04'
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage.info
+        fail_ci_if_error: false
+        
+    - name: Build packages
+      if: matrix.build_type == 'Release' && matrix.os == 'ubuntu-22.04'
+      run: |
+        cd build
+        cpack -G DEB
+        cpack -G TGZ
+        
+    - name: Upload artifacts
+      if: matrix.build_type == 'Release' && matrix.os == 'ubuntu-22.04'
+      uses: actions/upload-artifact@v3
+      with:
+        name: packages-${{ matrix.os }}
+        path: |
+          build/*.deb
+          build/*.tar.gz
+          
+  build-docker:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      
+    - name: Build Docker image
+      run: |
+        docker build -t open-yolo:latest .
+        
+    - name: Test Docker image
+      run: |
+        docker run --rm open-yolo:latest OpenYolo --version || true
+        
+  release:
+    name: Create Release
+    needs: [build-linux, build-docker]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    
+    steps:
+    - uses: actions/checkout@v3
+      
+    - name: Download artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: artifacts
+        
+    - name: Upload Release Assets
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          artifacts/**/*.deb
+          artifacts/**/*.tar.gz
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

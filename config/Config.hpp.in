@@ -1,0 +1,31 @@
+#ifndef OPENYOLO_CONFIG_HPP
+#define OPENYOLO_CONFIG_HPP
+
+#include <string>
+
+namespace openyolo {
+
+/**
+ * @brief Configuration de l'application
+ * 
+ * Ce fichier est généré automatiquement par CMake à partir de Config.hpp.in
+ * Ne modifiez pas ce fichier directement, modifiez Config.hpp.in à la place.
+ */
+
+// Version de l'application
+constexpr const char* VERSION = "@PROJECT_VERSION@";
+
+// Chemins d'installation
+const std::string INSTALL_PREFIX = "@CMAKE_INSTALL_PREFIX@";
+const std::string BIN_DIR = "@CMAKE_INSTALL_FULL_BINDIR@";
+const std::string LIB_DIR = "@CMAKE_INSTALL_FULL_LIBDIR@";
+const std::string DATA_DIR = "@CMAKE_INSTALL_FULL_DATADIR@/@PROJECT_NAME@";
+const std::string DOC_DIR = "@CMAKE_INSTALL_FULL_DOCDIR@";
+
+// Options de compilation
+const bool ENABLE_LOGGING = @ENABLE_LOGGING@;
+const bool ENABLE_COVERAGE = @ENABLE_COVERAGE@;
+
+} // namespace openyolo
+
+#endif // OPENYOLO_CONFIG_HPP

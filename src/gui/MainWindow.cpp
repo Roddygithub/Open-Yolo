@@ -1,6 +1,6 @@
-#include "gui/MainWindow.hpp"
-#include "cursormanager/CursorManager.hpp"
-#include "displaymanager/DisplayManager.hpp"
+#include "../../include/gui/MainWindow.hpp"
+#include "../../include/cursormanager/CursorManager.hpp"
+#include "../../include/displaymanager/DisplayManager.hpp"
 #include <gtkmm/application.h>
 #include <gtkmm/builder.h>
 #include <gtkmm/button.h>

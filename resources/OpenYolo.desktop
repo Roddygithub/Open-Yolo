@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=OpenYolo
+Comment=OpenYolo - Gestionnaire de curseurs personnalisés
+Exec=/usr/local/bin/start-app
+Icon=OpenYolo
+Terminal=false
+Categories=Utility;Application;
+StartupNotify=true
+X-GNOME-Autostart-enabled=true
+X-GNOME-AutoRestart=true
+X-GNOME-Autostart-Delay=5

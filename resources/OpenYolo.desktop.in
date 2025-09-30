@@ -1,0 +1,22 @@
+[Desktop Entry]
+Type=Application
+Name=@PROJECT_NAME@
+GenericName=Gestionnaire de curseurs personnalisés
+Comment=Personnalisez et gérez vos curseurs sous Linux
+Exec=@CMAKE_INSTALL_FULL_BINDIR@/@PROJECT_NAME@ %f
+Icon=@PROJECT_NAME@
+Terminal=false
+Categories=Utility;System;GTK;
+Keywords=cursor;theme;customization;
+StartupNotify=true
+StartupWMClass=@PROJECT_NAME@
+MimeType=application/x-openyolo-cursor-theme;
+
+# Traductions
+Name[fr]=OpenYolo - Gestionnaire de curseurs
+Comment[fr]=Personnalisez et gérez vos curseurs sous Linux
+
+# Informations supplémentaires
+X-GNOME-FullName=@PROJECT_NAME@
+X-GNOME-Keywords=cursor;theme;customization;
+X-GNOME-UsesNotifications=true

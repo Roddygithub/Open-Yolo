@@ -1,0 +1,52 @@
+{
+  "app": {
+    "name": "OpenYolo",
+    "version": "1.0.0",
+    "description": "OpenYolo - Application de capture d'écran et d'annotation",
+    "author": "Votre Nom",
+    "license": "MIT"
+  },
+  "ui": {
+    "theme": "dark",
+    "language": "fr",
+    "showTooltips": true,
+    "autoSave": true
+  },
+  "capture": {
+    "defaultFormat": "png",
+    "saveDirectory": "~/Images/Captures",
+    "includeCursor": true,
+    "playSound": true
+  },
+  "shortcuts": {
+    "captureFullscreen": "PrtScn",
+    "captureArea": "Shift+PrtScn",
+    "captureWindow": "Alt+PrtScn",
+    "openEditor": "Ctrl+E"
+  },
+  "editor": {
+    "defaultTool": "rectangle",
+    "defaultColor": "#ff0000",
+    "defaultThickness": 2,
+    "showGrid": false
+  },
+  "storage": {
+    "maxHistorySize": 50,
+    "autoClearHistory": true,
+    "clearAfterDays": 30
+  },
+  "updates": {
+    "checkForUpdates": true,
+    "checkFrequency": "weekly"
+  },
+  "logging": {
+    "level": "info",
+    "maxSize": "10MB",
+    "maxFiles": 5
+  },
+  "features": {
+    "cloudSync": false,
+    "ocr": false,
+    "plugins": true
+  }
+}

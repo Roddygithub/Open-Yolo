@@ -1,5 +1,5 @@
-#include "input/InputManager.hpp"
-#include "gui/MainWindow.hpp"
+#include "../../include/input/InputManager.hpp"
+#include "../../include/gui/MainWindow.hpp"
 #include <iostream>
 #include <sstream>
 #include <gtkmm/application.h>
@@ -38,6 +38,12 @@ InputManager::InputManager()
 InputManager::~InputManager() {
     // Nettoyage des gestionnaires d'événements
     shortcuts_.clear();
+}
+
+bool InputManager::initialize() {
+    // L'initialisation est déjà effectuée dans le constructeur
+    // Cette méthode existe pour la compatibilité avec l'interface
+    return display_ && deviceManager_;
 }
 
 void InputManager::setupGTKIntegration(MainWindow* window, std::shared_ptr<cursor_manager::CursorManager> cursorManager) {

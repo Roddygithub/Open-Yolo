@@ -17,13 +17,13 @@
 #include <cstdlib>
 
 // Inclure nos en-têtes
-#include "config/ConfigManager.hpp"
-#include "log/Logger.hpp"
-#include "cursormanager/CursorManager.hpp"
-#include "cursormanager/ShaderProgram.hpp"
-#include "gui/MainWindow.hpp"
-#include "input/InputManager.hpp"
-#include "displaymanager/DisplayManager.hpp"
+#include "../include/config/ConfigManager.hpp"
+#include "../include/log/Logger.hpp"
+#include "../include/cursormanager/CursorManager.hpp"
+#include "../include/cursormanager/ShaderProgram.hpp"
+#include "../include/gui/MainWindow.hpp"
+#include "../include/input/InputManager.hpp"
+#include "../include/displaymanager/DisplayManager.hpp"
 
 // Alias pour faciliter l'accès
 namespace cfg = openyolo::config;

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" 
+     xmlns="http://www.w3.org/2000/svg" 
+     xmlns:xlink="http://www.w3.org/1999/xlink">
+    
+    <!-- Définitions des dégradés et filtres -->
+    <defs>
+        <!-- Dégradé pour le cercle extérieur -->
+        <radialGradient id="outerGradient" cx="50%" cy="50%" r="70%" fx="30%" fy="30%">
+            <stop offset="0%" stop-color="#4CAF50" stop-opacity="1" />
+            <stop offset="100%" stop-color="#388E3C" stop-opacity="1" />
+        </radialGradient>
+        
+        <!-- Dégradé pour le cercle intérieur -->
+        <radialGradient id="innerGradient" cx="50%" cy="50%" r="70%" fx="40%" fy="40%">
+            <stop offset="0%" stop-color="#81C784" stop-opacity="1" />
+            <stop offset="100%" stop-color="#4CAF50" stop-opacity="1" />
+        </radialGradient>
+        
+        <!-- Filtre pour l'ombre portée -->
+        <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="15" result="blur" />
+            <feOffset in="blur" dx="5" dy="5" result="offsetBlur" />
+            <feComponentTransfer in="offsetBlur" result="shadow">
+                <feFuncA type="linear" slope="0.2" />
+            </feComponentTransfer>
+            <feMerge> 
+                <feMergeNode in="shadow" />
+                <feMergeNode in="SourceGraphic" />
+            </feMerge>
+        </filter>
+        
+        <!-- Filtre pour le reflet -->
+        <filter id="reflection" x="0" y="0" width="100%" height="50%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur" />
+            <feComponentTransfer in="blur" result="highlight">
+                <feFuncA type="table" tableValues="0 0.1 0.3 0.1 0" />
+            </feComponentTransfer>
+        </filter>
+    </defs>
+    
+    <!-- Groupe principal avec l'ombre portée -->
+    <g filter="url(#dropShadow)">
+        <!-- Cercle extérieur avec bordure -->
+        <circle cx="512" cy="512" r="450" 
+                fill="url(#outerGradient)" 
+                stroke="#388E3C" 
+                stroke-width="15" />
+        
+        <!-- Cercle intérieur avec dégradé -->
+        <circle cx="512" cy="512" r="300" 
+                fill="url(#innerGradient)" 
+                stroke="#FFFFFF20" 
+                stroke-width="5" />
+        
+        <!-- Symbole Y -->
+        <path d="M512 250 L412 450 L462 450 L512 350 L562 450 L612 450 L512 250 Z" 
+              fill="#1B5E20" 
+              filter="drop-shadow(2px 2px 4px rgba(0,0,0,0.3))"/>
+        
+        <!-- Effet de reflet -->
+        <ellipse cx="400" cy="400" rx="250" ry="120" 
+                 fill="white" fill-opacity="0.15" 
+                 transform="rotate(-30, 400, 400)" 
+                 filter="url(#reflection)" />
+    </g>
+    
+    <!-- Texte optionnel sous l'icône (pour les très grandes tailles) -->
+    <text x="512" y="950" 
+          font-family="Arial, sans-serif" 
+          font-size="60" 
+          text-anchor="middle" 
+          fill="#1B5E20" 
+          font-weight="bold">OpenYolo</text>
+</svg>

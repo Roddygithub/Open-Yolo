@@ -1,0 +1,72 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 15,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "dev",
+      "displayName": "Development",
+      "description": "Configure for development with debug symbols and tests",
+      "binaryDir": "${sourceDir}/build",
+      "generator": "Unix Makefiles",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "ENABLE_TESTS": "ON",
+        "ENABLE_COVERAGE": "ON",
+        "BUILD_SHARED_LIBS": "ON"
+      },
+      "environment": {
+        "CC": "clang-14",
+        "CXX": "clang++-14",
+        "CXXFLAGS": "-Wall -Wextra -Wpedantic -fno-omit-frame-pointer"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release",
+      "description": "Configure for release with optimizations",
+      "binaryDir": "${sourceDir}/build-release",
+      "generator": "Unix Makefiles",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "ENABLE_TESTS": "OFF",
+        "ENABLE_COVERAGE": "OFF",
+        "BUILD_SHARED_LIBS": "ON"
+      },
+      "environment": {
+        "CC": "clang-14",
+        "CXX": "clang++-14",
+        "CXXFLAGS": "-O3 -DNDEBUG -march=native"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "dev",
+      "configurePreset": "dev",
+      "configuration": "Debug",
+      "jobs": 0
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "configuration": "Release",
+      "jobs": 0
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "unit-tests",
+      "configurePreset": "dev",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

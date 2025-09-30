@@ -1,4 +1,4 @@
-#include "config/ConfigManager.hpp"
+#include "../../include/config/ConfigManager.hpp"
 #include <fstream>
 #include <sstream>
 #include <stdexcept>

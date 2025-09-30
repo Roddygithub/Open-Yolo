@@ -1,201 +1,264 @@
 #!/bin/bash
 
-# Enable debug mode
+# Enable debug mode and exit on error
 set -euo pipefail
 
-# Log file for debugging
-LOG_FILE="/tmp/open-yolo-$(date +%s).log"
-echo "Starting OpenYolo at $(date)" > "$LOG_FILE"
+# Configuration
+LOG_DIR="/var/log/open-yolo"
+LOG_FILE="$LOG_DIR/open-yolo-$(date +%Y%m%d-%H%M%S).log"
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/open-yolo"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/open-yolo"
+DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/open-yolo"
+
+# Create necessary directories
+mkdir -p "$LOG_DIR" "$CONFIG_DIR" "$CACHE_DIR" "$DATA_DIR"
+chmod 755 "$LOG_DIR" "$CONFIG_DIR" "$CACHE_DIR" "$DATA_DIR"
 
 # Function to log messages
 log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+    local level="${1:-INFO}"
+    local message="${2:-}"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo "[$timestamp] [$level] $message" | tee -a "$LOG_FILE"
 }
 
-log "=== Starting OpenYolo Application ==="
+# Initialize logging
+{
+    log "INFO" "=== Starting OpenYolo Application ==="
+    log "INFO" "Version: $(cat /workspace/VERSION 2>/dev/null || echo 'unknown')"
+    log "INFO" "Hostname: $(hostname)"
+    log "INFO" "User: $(whoami) (UID: $(id -u), GID: $(id -g))"
+} >> "$LOG_FILE" 2>&1
 
-# Set display from environment or use default
-export DISPLAY=${DISPLAY:-:99}
-log "Using DISPLAY=$DISPLAY"
-
-# Set XAUTHORITY if not set
-if [ -z "${XAUTHORITY:-}" ]; then
-    export XAUTHORITY="/tmp/.Xauthority"
-    log "Setting XAUTHORITY to $XAUTHORITY"
-fi
-
-# Create necessary directories
-log "Setting up X11 environment..."
-mkdir -p /tmp/.X11-unix
-chmod 1777 /tmp/.X11-unix 2>/dev/null || {
-    log "Warning: Could not set permissions on /tmp/.X11-unix"
+# Function to check and install dependencies
+check_dependencies() {
+    local deps=("$@")
+    local missing=()
+    
+    for dep in "${deps[@]}"; do
+        if ! command -v "$dep" >/dev/null 2>&1; then
+            missing+=("$dep")
+        fi
+    done
+    
+    if [ ${#missing[@]} -gt 0 ]; then
+        log "WARNING" "Missing dependencies: ${missing[*]}"
+        
+        if command -v apt-get >/dev/null 2>&1; then
+            log "INFO" "Attempting to install missing dependencies..."
+            apt-get update && apt-get install -y "${missing[@]}" || {
+                log "ERROR" "Failed to install dependencies"
+                return 1
+            }
+        else
+            log "ERROR" "Please install the following packages: ${missing[*]}"
+            return 1
+        fi
+    fi
+    
+    return 0
 }
 
-# Set up XDG runtime directory
-export XDG_RUNTIME_DIR="/tmp/runtime-$(id -u)"
-mkdir -p "$XDG_RUNTIME_DIR"
-chmod 700 "$XDG_RUNTIME_DIR"
-
-# Set up GTK environment
-log "Configuring GTK environment..."
-
-# GTK basic configuration
-export GTK_THEME="Adwaita"
-export GTK_THEME_VARIANT="light"
-export GDK_BACKEND="x11"
-export NO_AT_BRIDGE=1
-
-# Disable overlay scrolling and client-side decorations
-export GTK_OVERLAY_SCROLLING=0
-export GTK_CSD=0
-
-# Memory management settings
-export G_SLICE=always-malloc
-export G_DEBUG=gc-friendly
-
-# Disable specific warnings and debug output
-export G_ENABLE_DIAGNOSTIC=0
-
-# Disable graphical effects to improve stability
-export CLUTTER_VBLANK=none
-export CLUTTER_PAINT=disable-clipped-redraws,disable-culling
-
-# Configure debug settings (enable only if needed)
-# export GTK_DEBUG=1
-# export GDK_DEBUG=1
-# export G_MESSAGES_DEBUG=all
-# export G_DEBUG=fatal-warnings
-
-# Create GTK settings directory
-log "Creating GTK settings..."
-mkdir -p "$HOME/.config/gtk-3.0"
-cat > "$HOME/.config/gtk-3.0/settings.ini" << 'EOL'
-[Settings]
-gtk-theme-name=Adwaita
-gtk-icon-theme-name=Adwaita
-gtk-font-name=Sans 10
-gtk-cursor-theme-name=Adwaita
-gtk-enable-animations=0
-gtk-application-prefer-dark-theme=false
-EOL
-
-# Set environment for GTK
-export GTK_DATA_PREFIX=/usr
-
-# Log environment for debugging
-log "=== Environment Variables ==="
-env | grep -E 'GTK|GDK|G_|DISPLAY|XAUTHORITY|XDG|LD_LIBRARY_PATH' | tee -a "$LOG_FILE"
-log "============================"
+# Set up environment variables
+setup_environment() {
+    log "INFO" "Setting up environment..."
+    
+    # Set display from environment or use default
+    export DISPLAY=${DISPLAY:-:99}
+    export XAUTHORITY=${XAUTHORITY:-/tmp/.Xauthority}
+    
+    # Set up XDG runtime directory
+    export XDG_RUNTIME_DIR="/tmp/runtime-$(id -u)"
+    mkdir -p "$XDG_RUNTIME_DIR"
+    chmod 700 "$XDG_RUNTIME_DIR"
+    
+    # GTK environment
+    export GTK_THEME="Adwaita"
+    export GDK_BACKEND="x11"
+    export NO_AT_BRIDGE=1
+    export CLUTTER_BACKEND="x11"
+    
+    # Performance optimizations
+    export G_SLICE="always-malloc"
+    export G_DEBUG="gc-friendly"
+    export G_ENABLE_DIAGNOSTIC=0
+    
+    # Disable client-side decorations and animations
+    export GTK_CSD=0
+    export GTK_OVERLAY_SCROLLING=0
+    
+    # Log environment for debugging
+    log "DEBUG" "Environment variables:"
+    env | grep -E '^DISPLAY|^XAUTHORITY|^XDG_|^GTK_|^GDK_|^G_|^CLUTTER_|^LD_LIBRARY_PATH' | sort | while read -r line; do
+        log "DEBUG" "  $line"
+    done
+    
+    return 0
+}
 
 # Check X server connection
-log "Checking X server connection..."
-if ! xdpyinfo >/dev/null 2>&1; then
-    log "Error: Cannot connect to X server on $DISPLAY"
-    log "Troubleshooting steps:"
-    log "1. Make sure Xvfb is running in the xvfb container"
-    log "2. Check that the display $DISPLAY is accessible"
-    log "3. Verify that /tmp/.X11-unix is mounted correctly"
-    log "4. Check Xauthority file permissions"
-    exit 1
-else
-    log "Successfully connected to X server on $DISPLAY"
-    log "X server info:"
-    xdpyinfo | grep -E '^name of display|^version|^vendor string|^default screen' | tee -a "$LOG_FILE"
-fi
-
-# Check for required GTK components
-log "Checking for required GTK components..."
-if ! command -v gtk3-demo &>/dev/null; then
-    log "Warning: gtk3-demo not found. Installing required packages..."
-    if command -v apt-get &>/dev/null; then
-        sudo apt-get update && sudo apt-get install -y gtk-3-examples || {
-            log "Warning: Failed to install gtk-3-examples"
-        }
+check_xserver() {
+    log "INFO" "Checking X server connection..."
+    
+    if ! command -v xdpyinfo >/dev/null 2>&1; then
+        log "ERROR" "xdpyinfo not found. Please install x11-utils package."
+        return 1
     fi
-fi
-
-# Change to application directory
-APP_DIR="/workspace/build/bin"
-log "Changing to application directory: $APP_DIR"
-cd "$APP_DIR" || {
-    log "Error: Could not change to directory: $APP_DIR"
-    log "Available directories in $(dirname "$APP_DIR"):"
-    ls -la "$(dirname "$APP_DIR")" | tee -a "$LOG_FILE"
-    exit 1
+    
+    if ! xdpyinfo >/dev/null 2>&1; then
+        log "ERROR" "Cannot connect to X server on $DISPLAY"
+        log "TROUBLESHOOTING" "1. Make sure Xvfb is running"
+        log "TROUBLESHOOTING" "2. Check display $DISPLAY is accessible"
+        log "TROUBLESHOOTING" "3. Verify /tmp/.X11-unix is mounted"
+        log "TROUBLESHOOTING" "4. Check Xauthority file permissions"
+        return 1
+    fi
+    
+    log "INFO" "X server connection successful"
+    log "DEBUG" "X server info:"
+    xdpyinfo | grep -E '^name of display|^version|^vendor string|^default screen' | while read -r line; do
+        log "DEBUG" "  $line"
+    done
+    
+    return 0
 }
 
-# Check if the binary exists
-BINARY_NAME="OpenYolo"
-BINARY_PATH="./$BINARY_NAME"
+# Find the application binary
+find_binary() {
+    local binary_name="OpenYolo"
+    local search_paths=(
+        "/workspace/build/bin/$binary_name"
+        "/workspace/build/$binary_name"
+        "/workspace/src/$binary_name"
+        "/usr/local/bin/$binary_name"
+        "/usr/bin/$binary_name"
+        "./$binary_name"
+    )
+    
+    for path in "${search_paths[@]}"; do
+        if [ -f "$path" ] && [ -x "$path" ]; then
+            echo "$path"
+            return 0
+        fi
+    done
+    
+    log "ERROR" "Could not find $binary_name executable in any of:"
+    for path in "${search_paths[@]}"; do
+        log "ERROR" "  - $path"
+    done
+    
+    log "DEBUG" "Available files in /workspace:"
+    find /workspace -type f -executable -name "$binary_name*" -o -name "*.so*" | sort | while read -r file; do
+        log "DEBUG" "  $file"
+    done
+    
+    return 1
+}
 
-# Check multiple possible locations for the binary
-if [ ! -f "$BINARY_PATH" ]; then
-    # Try in the build directory
-    if [ -f "/workspace/build/$BINARY_NAME" ]; then
-        BINARY_PATH="/workspace/build/$BINARY_NAME"
-    # Try in the bin directory
-    elif [ -f "/workspace/build/bin/$BINARY_NAME" ]; then
-        BINARY_PATH="/workspace/build/bin/$BINARY_NAME"
-    # Try in the source directory
-    elif [ -f "/workspace/src/$BINARY_NAME" ]; then
-        BINARY_PATH="/workspace/src/$BINARY_NAME"
-    # Try in /usr/local/bin
-    elif [ -f "/usr/local/bin/$BINARY_NAME" ]; then
-        BINARY_PATH="/usr/local/bin/$BINARY_NAME"
-    else
-        log "Error: $BINARY_NAME binary not found in any standard location"
-        log "Searched in:"
-        log "  - $(pwd)/$BINARY_NAME"
-        log "  - /workspace/build/$BINARY_NAME"
-        log "  - /workspace/build/bin/$BINARY_NAME"
-        log "  - /workspace/src/$BINARY_NAME"
-        log "  - /usr/local/bin/$BINARY_NAME"
-        log "\nAvailable files in /workspace:"
-        find /workspace -type f -name "$BINARY_NAME" -o -name "$BINARY_NAME*" | tee -a "$LOG_FILE"
-        log "\nPlease build the application first"
+# Check library dependencies
+check_libraries() {
+    local binary_path="$1"
+    
+    log "INFO" "Checking library dependencies for $binary_path"
+    
+    if ! command -v ldd >/dev/null 2>&1; then
+        log "WARNING" "ldd not found, cannot check library dependencies"
+        return 0
+    fi
+    
+    if ! ldd "$binary_path" >/dev/null 2>&1; then
+        log "ERROR" "Failed to check shared library dependencies"
+        log "DEBUG" "ldd output:"
+        ldd -v "$binary_path" 2>&1 | while read -r line; do
+            log "DEBUG" "  $line"
+        done
+        
+        log "DEBUG" "Library search paths:"
+        ldconfig -v 2>/dev/null | grep -v "^\s*$" | while read -r line; do
+            log "DEBUG" "  $line"
+        done
+        
+        return 1
+    fi
+    
+    log "INFO" "All library dependencies resolved successfully"
+    return 0
+}
+
+# Main execution
+main() {
+    # Check for required dependencies
+    local required_deps=(
+        "gtk3-demo" "glxinfo" "xrandr" "xdpyinfo"
+    )
+    
+    if ! check_dependencies "${required_deps[@]}"; then
+        log "ERROR" "Failed to resolve dependencies"
         exit 1
     fi
-fi
-
-log "Found $BINARY_NAME at: $BINARY_PATH"
-
-# Set the library path if needed
-export LD_LIBRARY_PATH="/workspace/build/lib:${LD_LIBRARY_PATH:-}"
-
-# Check for required libraries
-log "Checking for required libraries in $BINARY_PATH..."
-if ! ldd "$BINARY_PATH" >/dev/null 2>&1; then
-    log "Error: Failed to check shared library dependencies for $BINARY_PATH"
-    log "Trying to run ldd with more verbose output..."
-    ldd -v "$BINARY_PATH" 2>&1 | tee -a "$LOG_FILE"
     
-    # Show library search paths
-    log "\nLibrary search paths:"
-    ldconfig -v 2>/dev/null | grep -v "^\s*$" | tee -a "$LOG_FILE"
+    # Set up environment
+    setup_environment || {
+        log "ERROR" "Failed to set up environment"
+        exit 1
+    }
     
-    # Show environment variables
-    log "\nEnvironment variables:"
-    env | grep -E 'LD_LIBRARY_PATH|PATH' | tee -a "$LOG_FILE"
+    # Check X server connection
+    check_xserver || {
+        log "ERROR" "X server connection check failed"
+        exit 1
+    }
     
-    exit 1
-fi
+    # Find the application binary
+    local binary_path
+    binary_path=$(find_binary) || {
+        log "ERROR" "Could not find OpenYolo executable"
+        exit 1
+    }
+    
+    log "INFO" "Found OpenYolo at: $binary_path"
+    
+    # Check library dependencies
+    check_libraries "$binary_path" || {
+        log "ERROR" "Library dependency check failed"
+        exit 1
+    }
+    
+    # Set library path
+    export LD_LIBRARY_PATH="/workspace/build/lib:${LD_LIBRARY_PATH:-}"
+    
+    # Change to the binary directory
+    local binary_dir=$(dirname "$binary_path")
+    cd "$binary_dir" || {
+        log "ERROR" "Could not change to directory: $binary_dir"
+        exit 1
+    }
+    
+    log "INFO" "Starting OpenYolo from $(pwd)"
+    log "DEBUG" "Command: $binary_path $*"
+    log "DEBUG" "Working directory: $(pwd)"
+    log "DEBUG" "LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
+    
+    # Run the application
+    local exit_code=0
+    
+    if [ "${DEBUG:-0}" = "1" ]; then
+        log "INFO" "Running in debug mode with strace..."
+        strace -o "$LOG_DIR/strace-$(date +%s).log" -f -s 1000 \
+            "$binary_path" "$@" 2>&1 | tee -a "$LOG_FILE"
+        exit_code=${PIPESTATUS[0]}
+    else
+        log "INFO" "Starting OpenYolo..."
+        "$binary_path" "$@" 2>&1 | tee -a "$LOG_FILE"
+        exit_code=${PIPESTATUS[0]}
+    fi
+    
+    log "INFO" "OpenYolo exited with code $exit_code"
+    exit $exit_code
+}
 
-# Run the application
-log "Starting $BINARY_NAME from $BINARY_PATH..."
-log "Command: $BINARY_PATH $*"
-log "Current directory: $(pwd)"
-log "LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
-
-# Run the application with error handling
-set +e
-if [ "${DEBUG:-0}" = "1" ]; then
-    log "Running in debug mode with strace..."
-    strace -o "/tmp/open-yolo-strace-$(date +%s).log" -f -s 1000 \
-        "$BINARY_PATH" "$@" 2>&1 | tee -a "$LOG_FILE"
-else
-    log "Executing: $BINARY_PATH $*"
-    "$BINARY_PATH" "$@" 2>&1 | tee -a "$LOG_FILE"
-fi
+# Execute main function
+main "$@"
 
 # Capture the exit code
 APP_EXIT_CODE=${PIPESTATUS[0]}

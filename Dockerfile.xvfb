@@ -1,36 +1,116 @@
-FROM ubuntu:22.04
+# syntax=docker/dockerfile:1.4
 
-# Installation des dépendances
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    xvfb \
-    x11-utils \
-    x11-xserver-utils \
-    xauth \
-    dbus-x11 \
-    x11vnc \
-    xterm \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# =============================================================================
+# XvFB Dockerfile
+# =============================================================================
+# Ce Dockerfile crée une image légère avec Xvfb pour l'affichage virtuel
+# =============================================================================
 
-# Configuration X11
+FROM ubuntu:22.04 as builder
+
+# Arguments de construction
+ARG DEBIAN_FRONTEND=noninteractive
+ARG TZ=Europe/Paris
+
+# Variables d'environnement
+ENV \
+    # Configuration de la locale
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    # Configuration du fuseau horaire
+    TZ=${TZ} \
+    # Configuration de l'affichage
+    DISPLAY=:99 \
+    # Configuration Xvfb
+    XVFB_WHD="1920x1080x24" \
+    XVFB_OPTIONS="-screen 0 ${XVFB_WHD} -ac +extension GLX +render -noreset"
+
+# Installation des dépendances système
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    set -eux; \
+    # Configurer les dépôts
+    echo 'APT::Install-Recommends "false";' > /etc/apt/apt.conf.d/00recommends; \
+    echo 'APT::Install-Suggests "false";' >> /etc/apt/apt.conf.d/00recommends; \
+    # Mettre à jour les paquets
+    apt-get update -qq; \
+    # Installer les dépendances
+    apt-get install -y --no-install-recommends \
+        # Xvfb et outils X11
+        xvfb \
+        x11-utils \
+        x11-xserver-utils \
+        xauth \
+        x11vnc \
+        xterm \
+        # Gestionnaire de fenêtres léger
+        fluxbox \
+        # Outils réseau
+        net-tools \
+        iputils-ping \
+        # Outils système
+        procps \
+        lsof \
+        # Nettoyage
+        && apt-get clean \
+        && rm -rf /var/lib/apt/lists/* \
+        && rm -rf /tmp/* /var/tmp/*
+
+# Configuration des répertoires X11
 RUN mkdir -p /tmp/.X11-unix && \
-    chmod 1777 /tmp/.X11-unix
+    chmod 1777 /tmp/.X11-unix && \
+    # Créer le répertoire runtime pour Xvfb
+    mkdir -p /var/run/xvfb && \
+    chmod 755 /var/run/xvfb
 
-# Création du script de démarrage
-RUN echo '#!/bin/bash' > /start-xvfb.sh && \
-    echo 'set -e' >> /start-xvfb.sh && \
-    echo 'export DISPLAY=:99' >> /start-xvfb.sh && \
-    echo 'echo "Starting Xvfb on $DISPLAY..."' >> /start-xvfb.sh && \
-    echo 'Xvfb $DISPLAY -screen 0 1024x768x16 -ac -listen tcp -verbose &' >> /start-xvfb.sh && \
-    echo 'sleep 2' >> /start-xvfb.sh && \
-    echo 'if ! xdpyinfo -display $DISPLAY >/dev/null 2>&1; then' >> /start-xvfb.sh && \
-    echo '    echo "ERROR: Xvfb failed to start" >&2' >> /start-xvfb.sh && \
-    echo '    exit 1' >> /start-xvfb.sh && \
-    echo 'fi' >> /start-xvfb.sh && \
-    echo 'echo "Xvfb is running on $DISPLAY"' >> /start-xvfb.sh && \
-    echo 'while true; do sleep 60; done' >> /start-xvfb.sh && \
-    chmod +x /start-xvfb.sh
+# Créer un script de démarrage Xvfb simplifié
+RUN echo '#!/bin/sh' > /usr/local/bin/start-xvfb.sh && \
+    echo 'XVFB_DISPLAY=":99"' >> /usr/local/bin/start-xvfb.sh && \
+    echo 'XVFB_OPTIONS="-screen 0 1920x1080x24 -ac"' >> /usr/local/bin/start-xvfb.sh && \
+    echo 'XVFB_PID_FILE="/var/run/xvfb/xvfb.pid"' >> /usr/local/bin/start-xvfb.sh && \
+    echo 'XVFB_LOG_FILE="/var/log/xvfb/xvfb.log"' >> /usr/local/bin/start-xvfb.sh && \
+    echo 'mkdir -p $(dirname "$XVFB_LOG_FILE")' >> /usr/local/bin/start-xvfb.sh && \
+    echo 'touch "$XVFB_LOG_FILE"' >> /usr/local/bin/start-xvfb.sh && \
+    echo 'chmod 666 "$XVFB_LOG_FILE"' >> /usr/local/bin/start-xvfb.sh && \
+    echo 'pkill -9 Xvfb || true' >> /usr/local/bin/start-xvfb.sh && \
+    echo 'rm -f /tmp/.X99-lock /tmp/.X11-unix/X99' >> /usr/local/bin/start-xvfb.sh && \
+    echo 'echo "Starting Xvfb on $XVFB_DISPLAY"' >> /usr/local/bin/start-xvfb.sh && \
+    echo '/usr/bin/Xvfb $XVFB_DISPLAY $XVFB_OPTIONS &' >> /usr/local/bin/start-xvfb.sh && \
+    echo 'XVFB_PID=$!' >> /usr/local/bin/start-xvfb.sh && \
+    echo 'echo $XVFB_PID > "$XVFB_PID_FILE"' >> /usr/local/bin/start-xvfb.sh && \
+    echo 'sleep 1' >> /usr/local/bin/start-xvfb.sh && \
+    echo 'if ! ps -p $XVFB_PID > /dev/null; then' >> /usr/local/bin/start-xvfb.sh && \
+    echo '    echo "ERROR: Failed to start Xvfb" >&2' >> /usr/local/bin/start-xvfb.sh && \
+    echo '    exit 1' >> /usr/local/bin/start-xvfb.sh && \
+    echo 'fi' >> /usr/local/bin/start-xvfb.sh && \
+    echo 'echo "Xvfb is running on $XVFB_DISPLAY"' >> /usr/local/bin/start-xvfb.sh && \
+    echo 'while true; do sleep 1; done' >> /usr/local/bin/start-xvfb.sh
+
+# Rendre le script exécutable
+RUN chmod +x /usr/local/bin/start-xvfb.sh
+
+# Configuration de l'utilisateur non-root
+ARG USERNAME=devuser
+ARG USER_UID=1000
+ARG USER_GID=1000
+
+RUN mkdir -p /etc/sudoers.d && \
+    groupadd --gid "${USER_GID}" "${USERNAME}" || true && \
+    useradd --uid "${USER_UID}" --gid "${USER_GID}" -m "${USERNAME}" || true && \
+    echo "${USERNAME} ALL=(root) NOPASSWD: /usr/local/bin/start-xvfb.sh" > /etc/sudoers.d/xvfb && \
+    chmod 0440 /etc/sudoers.d/xvfb
+
+# Configuration des volumes
+VOLUME ["/tmp/.X11-unix"]
+
+# Exposition du port pour VNC (optionnel)
+EXPOSE 5900
 
 # Point d'entrée
-ENTRYPOINT ["/start-xvfb.sh"]
+ENTRYPOINT ["/usr/local/bin/start-xvfb.sh"]
+
+# Métadonnées
+LABEL \
+    maintainer="Votre Nom <votre.email@example.com>" \
+    description="Conteneur Xvfb pour l'affichage virtuel" \
+    version="1.0.0"

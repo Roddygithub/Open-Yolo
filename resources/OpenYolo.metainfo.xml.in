@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop">
+  <id>org.openyolo.desktop</id>
+  <metadata_license>GPL-3.0-or-later</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>@PROJECT_NAME@</name>
+  <summary>Gestionnaire de curseurs personnalisés pour Linux</summary>
+  <summary xml:lang="fr">Gestionnaire de curseurs personnalisés pour Linux</summary>
+  
+  <description>
+    <p>
+      OpenYolo est un gestionnaire de curseurs personnalisés pour Linux qui vous permet de personnaliser
+      l'apparence de votre curseur de souris avec des thèmes personnalisés et des effets visuels avancés.
+    </p>
+    <p xml:lang="fr">
+      OpenYolo est un gestionnaire de curseurs personnalisés pour Linux qui vous permet de personnaliser
+      l'apparence de votre curseur de souris avec des thèmes personnalisés et des effets visuels avancés.
+    </p>
+  </description>
+  
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/Roddygithub/Open-Yolo/main/screenshots/screenshot-1.png</image>
+      <caption>Interface principale d'OpenYolo</caption>
+    </screenshot>
+  </screenshots>
+  
+  <url type="homepage">@PROJECT_HOMEPAGE_URL@</url>
+  <url type="bugtracker">@PROJECT_HOMEPAGE_URL@/issues</url>
+  <url type="help">@PROJECT_HOMEPAGE_URL@/wiki</url>
+  
+  <developer_name>OpenYolo Team</developer_name>
+  <update_contact>contact@openyolo.org</update_contact>
+  
+  <releases>
+    <release version="@PROJECT_VERSION@" date="@BUILD_DATE@">
+      <description>
+        <p>Version initiale d'OpenYolo</p>
+      </description>
+    </release>
+  </releases>
+  
+  <content_rating type="oars-1.1">
+    <content_attribute id="violence-cartoon">none</content_attribute>
+    <content_attribute id="violence-fantasy">none</content_attribute>
+    <content_attribute id="violence-realistic">none</content_attribute>
+    <content_attribute id="violence-bloodshed">none</content_attribute>
+    <content_attribute id="violence-sexual">none</content_attribute>
+    <content_attribute id="drugs-alcohol">none</content_attribute>
+    <content_attribute id="drugs-narcotics">none</content_attribute>
+    <content_attribute id="drugs-tobacco">none</content_attribute>
+    <content_attribute id="sex-nudity">none</content_attribute>
+    <content_attribute id="sex-themes">none</content_attribute>
+    <content_attribute id="language-profanity">none</content_attribute>
+    <content_attribute id="language-humor">none</content_attribute>
+    <content_attribute id="language-discrimination">none</content_attribute>
+    <content_attribute id="social-chat">none</content_attribute>
+    <content_attribute id="social-audio">none</content_attribute>
+    <content_attribute id="social-location">none</content_attribute>
+    <content_attribute id="social-info">none</content_attribute>
+    <content_attribute id="money-purchasing">none</content_attribute>
+    <content_attribute id="money-gambling">none</content_attribute>
+  </content_rating>
+  
+  <provides>
+    <binary>@PROJECT_NAME@</binary>
+  </provides>
+  
+  <launchable type="desktop-id">@PROJECT_NAME@.desktop</launchable>
+  
+  <categories>
+    <category>Utility</category>
+    <category>System</category>
+    <category>GTK</category>
+  </categories>
+  
+  <keywords>
+    <keyword>cursor</keyword>
+    <keyword>theme</keyword>
+    <keyword>customization</keyword>
+    <keyword>mouse</keyword>
+    <keyword>pointer</keyword>
+  </keywords>
+  
+  <releases>
+    <release version="@PROJECT_VERSION@" date="@BUILD_DATE@" type="stable">
+      <description>
+        <p>Version initiale d'OpenYolo</p>
+      </description>
+    </release>
+  </releases>
+</component>

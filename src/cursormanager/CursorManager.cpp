@@ -1,5 +1,5 @@
-#include "include/cursormanager/CursorManager.hpp"
-#include "include/cursormanager/ShaderProgram.hpp"
+#include "../../include/cursormanager/CursorManager.hpp"
+#include "../../include/cursormanager/ShaderProgram.hpp"
 #include <SDL2/SDL_image.h>
 #include <gif_lib.h>
 #include <fstream>
@@ -304,7 +304,11 @@ void CursorManager::Impl::applyShadowEffect(GLuint sourceTexture, int width, int
     if (!shadowShader) return;
     
     shadowShader->use();
-    shadowShader->setUniform("offset", glm::vec2(shadowSettings.offsetX / width, shadowSettings.offsetY / height));
+    // Conversion explicite pour éviter les pertes de précision
+    shadowShader->setUniform("offset", glm::vec2(
+        static_cast<float>(shadowSettings.offsetX) / static_cast<float>(width), 
+        static_cast<float>(shadowSettings.offsetY) / static_cast<float>(height)
+    ));
     shadowShader->setUniform("alpha", alpha);
     shadowShader->setUniform("shadowColor", shadowSettings.color);
     
@@ -315,8 +319,10 @@ void CursorManager::Impl::applyShadowEffect(GLuint sourceTexture, int width, int
     glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
-void CursorManager::Impl::applyGlowEffect(GLuint sourceTexture, int width, int height) {
+void CursorManager::Impl::applyGlowEffect(GLuint sourceTexture, int /* width */, int /* height */) {
     if (!glowShader) return;
+    // Suppression de la variable inutilisée
+    static_cast<void>(sourceTexture);
     
     glowShader->use();
     glowShader->setUniform("intensity", glowSettings.intensity);
@@ -358,7 +364,8 @@ std::unique_ptr<ShaderProgram> CursorManager::Impl::loadShader(
     close(ffd);
     
     // Write shader sources to temporary files
-    bool success = false;
+    // Suppression de la variable inutilisée
+    // bool success = false;
     std::ofstream vertFile(vertexFile);
     if (vertFile.is_open()) {
         vertFile << vertexSrc;
@@ -372,8 +379,6 @@ std::unique_ptr<ShaderProgram> CursorManager::Impl::loadShader(
             // Load shaders from the temporary files
             auto shader = std::make_unique<ShaderProgram>();
             if (shader->loadFromFiles(vertexFile, fragmentFile)) {
-                success = true;
-                
                 // Clean up temporary files
                 std::remove(vertexFile.c_str());
                 std::remove(fragmentFile.c_str());
@@ -678,7 +683,6 @@ void CursorManager::setScale(float scale) {
     // On pourrait stocker le chemin actuel et le recharger
     // Mais comme on n'a pas accès direct au chemin, on ne fait rien pour l'instant
     // Une meilleure implémentation serait d'ajouter une méthode getCurrentCursorPath()
-    
     // On peut quand même mettre à jour la variable d'échelle si elle existe
     pImpl->setScale(scale);
 }
@@ -688,7 +692,20 @@ void CursorManager::setAnimationSpeed(int fps) {
         pImpl->setFps(fps);
     }
 }
+
+void CursorManager::setSize(float size) {
+    setScale(size);
+}
+
+void CursorManager::setEnabled(bool enabled) {
+    if (pImpl) {
+        pImpl->setEnabled(enabled);
+    }
+}
+
+bool CursorManager::isEnabled() const {
+    return pImpl ? pImpl->isEnabled() : false;
+}
+
 void CursorManager::optimizeGPUMemory() { pImpl->optimizeGPUMemory(); }
 void CursorManager::clearEffects() { pImpl->clearEffects(); }
-
-} // namespace cursor_manager

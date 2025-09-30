@@ -7,7 +7,7 @@
 #include <map>
 #include <functional>
 #include <gdk/gdk.h> // Pour gtk_accelerator_parse
-#include "input/InputManager.hpp"
+#include "../input/InputManager.hpp"
 
 // Forward declarations
 namespace cursor_manager {

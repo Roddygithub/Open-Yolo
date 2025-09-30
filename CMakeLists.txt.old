@@ -1,0 +1,306 @@
+cmake_minimum_required(VERSION 3.15)
+
+# Configuration du projet
+project(OpenYolo
+    VERSION 1.0.0
+    DESCRIPTION "Gestionnaire de curseurs personnalisés pour Linux"
+    HOMEPAGE_URL "https://github.com/Roddygithub/Open-Yolo"
+    LANGUAGES CXX C
+)
+
+# Définir la politique CMP0077 pour les options de projet
+if(POLICY CMP0077)
+    cmake_policy(SET CMP0077 NEW)
+endif()
+
+# Options de développement
+option(ENABLE_LOGGING "Activer les logs de débogage" ON)
+option(BUILD_TESTS "Construire les tests" OFF)
+option(ENABLE_COVERAGE "Activer la couverture de code" OFF)
+option(BUILD_SHARED_LIBS "Construire les bibliothèques partagées" ON)
+option(ENABLE_WARNINGS_AS_ERRORS "Traiter les avertissements comme des erreurs" ON)
+option(ENABLE_LTO "Activer l'optimisation de l'éditeur de liens" ON)
+option(ENABLE_ASAN "Activer l'address sanitizer (débogage)" OFF)
+option(ENABLE_UBSAN "Activer l'undefined behavior sanitizer (débogage)" OFF)
+option(ENABLE_TSAN "Activer le thread sanitizer (débogage)" OFF)
+
+# Configuration C++
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# Configuration des avertissements
+if(MSVC)
+    add_compile_options(/W4 /WX)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+else()
+    add_compile_options(-Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion)
+    if(ENABLE_WARNINGS_AS_ERRORS)
+        add_compile_options(-Werror)
+    endif()
+    
+    # Options de débogage
+    if(ENABLE_ASAN)
+        add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+        add_link_options(-fsanitize=address)
+    endif()
+    
+    if(ENABLE_UBSAN)
+        add_compile_options(-fsanitize=undefined -fno-omit-frame-pointer)
+        add_link_options(-fsanitize=undefined)
+    endif()
+    
+    if(ENABLE_TSAN)
+        add_compile_options(-fsanitize=thread)
+        add_link_options(-fsanitize=thread)
+    endif()
+    
+    # Optimisations
+    if(ENABLE_LTO)
+        include(CheckIPOSupported)
+        check_ipo_supported(RESULT LTO_SUPPORTED OUTPUT output)
+        if(LTO_SUPPORTED)
+            set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+        else()
+            message(WARNING "L'optimisation LTO n'est pas supportée: ${output}")
+        endif()
+    endif()
+endif()
+
+# Configuration des chemins de sortie
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+# Créer les répertoires de sortie si nécessaire
+file(MAKE_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
+file(MAKE_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+file(MAKE_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+
+# Configuration des chemins d'installation
+include(GNUInstallDirs)
+set(CMAKE_INSTALL_LIBDIR ${CMAKE_INSTALL_LIBDIR})
+set(CMAKE_INSTALL_BINDIR ${CMAKE_INSTALL_BINDIR})
+set(CMAKE_INSTALL_INCLUDEDIR ${CMAKE_INSTALL_INCLUDEDIR})
+
+# Détection des dépendances
+find_package(PkgConfig REQUIRED)
+
+# Fonction utilitaire pour vérifier les dépendances
+function(check_required_package pkg_name pkg_config_name version)
+    if(NOT ${pkg_name}_FOUND)
+        message(STATUS "Recherche de ${pkg_name} (version >= ${version})...")
+        pkg_check_modules(${pkg_name} ${pkg_config_name}>=${version})
+        if(${pkg_name}_FOUND)
+            message(STATUS "  ${pkg_name} trouvé (${${pkg_name}_VERSION})")
+        else()
+            message(FATAL_ERROR "  ${pkg_name} non trouvé. Version minimale requise: ${version}")
+        endif()
+    endif()
+endfunction()
+
+# Vérification des dépendances GTK
+check_required_package(GTKMM gtkmm-3.0 3.24.0)
+check_required_package(GDKMM gdkmm-3.0 3.24.0)
+check_required_package(CAIROMM cairomm-1.0 1.14.0)
+check_required_package(GLIBMM glibmm-2.4 2.54.0)
+check_required_package(SIGC++ sigc++-2.0 2.10.0)
+check_required_package(GIOMM giomm-2.4 2.54.0)
+check_required_package(PANGOMM pangomm-1.4 2.42.0)
+check_required_package(ATKMM atkmm-1.6 2.24.0)
+check_required_package(GTK3 gtk+-3.0 3.22.0)
+check_required_package(GDK3 gdk-3.0 3.22.0)
+check_required_package(GIO2 gio-2.0 2.50.0)
+check_required_package(GLIBCONFIG glib-2.0 2.50.0)
+check_required_package(GOBJECT gobject-2.0 2.50.0)
+
+# Vérification d'OpenGL
+find_package(OpenGL REQUIRED)
+if(NOT OPENGL_FOUND)
+    message(FATAL_ERROR "OpenGL est requis mais n'a pas été trouvé")
+else()
+    message(STATUS "OpenGL trouvé (version ${OPENGL_VERSION})")
+endif()
+
+# Vérification de SDL2
+check_required_package(SDL2 sdl2 2.0.10)
+find_package(SDL2_image REQUIRED)
+
+# Vérification de GLEW
+find_package(GLEW REQUIRED)
+if(NOT GLEW_FOUND)
+    message(FATAL_ERROR "GLEW est requis mais n'a pas été trouvé")
+else()
+    message(STATUS "GLEW trouvé (version ${GLEW_VERSION})")
+endif()
+
+# Vérification de X11 et de ses extensions
+find_package(X11 REQUIRED)
+if(NOT X11_FOUND)
+    message(FATAL_ERROR "X11 est requis mais n'a pas été trouvé")
+else()
+    message(STATUS "X11 trouvé (version ${X11_VERSION})")
+    
+    # Recherche des extensions X11 nécessaires
+    include(FindX11)
+    find_package(X11 REQUIRED COMPONENTS X11 Xrandr Xinerama Xcursor Xi)
+    
+    if(NOT X11_Xrandr_FOUND)
+        message(FATAL_ERROR "L'extension Xrandr est requise mais n'a pas été trouvée")
+    endif()
+    
+    if(NOT X11_Xinerama_FOUND)
+        message(FATAL_ERROR "L'extension Xinerama est requise mais n'a pas été trouvée")
+    endif()
+    
+    if(NOT X11_Xcursor_FOUND)
+        message(FATAL_ERROR "L'extension Xcursor est requise mais n'a pas été trouvée")
+    endif()
+    
+    if(NOT X11_Xi_FOUND)
+        message(FATAL_ERROR "L'extension XInput est requise mais n'a pas été trouvée")
+    endif()
+    
+    message(STATUS "Toutes les extensions X11 requises sont disponibles")
+endif()
+
+# Configuration de CTest si les tests sont activés
+if(BUILD_TESTS)
+    enable_testing()
+    include(CTest)
+    add_subdirectory(tests)
+endif()
+
+# Configuration de la couverture de code
+if(ENABLE_COVERAGE)
+    if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+        message(WARNING "La couverture de code est activée mais le mode Debug n'est pas sélectionné. Les résultats peuvent être imprécis.")
+    endif()
+    
+    # Activer les options de couverture
+    add_compile_options(--coverage)
+    add_link_options(--coverage)
+    
+    # Ajout d'une cible pour générer un rapport de couverture
+    find_program(GCOV_PATH gcov)
+    find_program(LCOV_PATH lcov)
+    find_program(GENHTML_PATH genhtml)
+    
+    if(GCOV_PATH AND LCOV_PATH AND GENHTML_PATH)
+        add_custom_target(coverage
+            COMMAND ${LCOV_PATH} --directory . --zerocounters
+            COMMAND $<TARGET_FILE:${PROJECT_NAME}>
+            COMMAND ${LCOV_PATH} --directory . --capture --output-file coverage.info
+            COMMAND ${LCOV_PATH} --remove coverage.info '*/tests/*' '/usr/*' --output-file coverage.info
+            COMMAND ${GENHTML_PATH} coverage.info --output-directory ${CMAKE_BINARY_DIR}/coverage
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+            COMMENT "Génération du rapport de couverture de code..."
+        )
+    else()
+        message(WARNING "Outils de couverture de code non trouvés. La cible 'coverage' ne sera pas disponible.")
+    endif()
+endif()
+
+# Configuration des chemins d'inclusion
+target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+    ${GTKMM_INCLUDE_DIRS}
+    ${GDKMM_INCLUDE_DIRS}
+    ${CAIROMM_INCLUDE_DIRS}
+    ${GLIBMM_INCLUDE_DIRS}
+    ${SIGC++_INCLUDE_DIRS}
+    ${GIOMM_INCLUDE_DIRS}
+    ${PANGOMM_INCLUDE_DIRS}
+    ${ATKMM_INCLUDE_DIRS}
+    ${SDL2_INCLUDE_DIRS}
+    ${SDL2_IMAGE_INCLUDE_DIRS}
+    ${OPENGL_INCLUDE_DIRS}
+    ${GLEW_INCLUDE_DIRS}
+    ${X11_INCLUDE_DIR}
+)
+
+# Configuration des librairies à lier
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    # GTK et dépendances
+    ${GTKMM_LIBRARIES}
+    ${GDKMM_LIBRARIES}
+    ${CAIROMM_LIBRARIES}
+    ${GLIBMM_LIBRARIES}
+    ${SIGC++_LDFLAGS}
+    ${GIOMM_LIBRARIES}
+    ${PANGOMM_LIBRARIES}
+    ${ATKMM_LIBRARIES}
+    ${GTK3_LIBRARIES}
+    ${GDK3_LIBRARIES}
+    ${GIO2_LIBRARIES}
+    ${GLIBCONFIG_LIBRARIES}
+    ${GOBJECT_LIBRARIES}
+    
+    # SDL2
+    SDL2::SDL2
+    SDL2_image::SDL2_image
+    
+    # OpenGL et GLEW
+    OpenGL::GL
+    GLEW::GLEW
+    
+    # X11 et extensions
+    ${X11_LIBRARIES}
+    ${X11_Xrandr_LIB}
+    ${X11_Xinerama_LIB}
+    ${X11_Xcursor_LIB}
+    ${X11_Xi_LIB}
+    
+    # Autres
+    ${CMAKE_THREAD_LIBS_INIT}
+    dl
+)
+
+# Configuration de l'installation
+install(TARGETS ${PROJECT_NAME}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+# Installation des en-têtes
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FILES_MATCHING PATTERN "*.hpp" PATTERN "*.h"
+)
+
+# Ajout des sous-répertoires
+add_subdirectory(src)
+
+# Configuration CPack pour la création de paquets
+include(InstallRequiredSystemLibraries)
+set(CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/README.md")
+set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
+set(CPACK_PACKAGE_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
+set(CPACK_PACKAGE_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
+set(CPACK_PACKAGE_DESCRIPTION "${PROJECT_DESCRIPTION}")
+set(CPACK_PACKAGE_HOMEPAGE_URL "${PROJECT_HOMEPAGE_URL}")
+set(CPACK_SOURCE_GENERATOR "TGZ;ZIP")
+set(CPACK_GENERATOR "DEB")
+
+# Dépendances pour les paquets DEB
+set(CPACK_DEBIAN_PACKAGE_DEPENDS 
+    "libgtkmm-3.0-dev (>= 3.24.0), "
+    "libcairomm-1.0-dev (>= 1.14.0), "
+    "libglibmm-2.4-dev (>= 2.54.0), "
+    "libsigc++-2.0-dev (>= 2.10.0), "
+    "libsdl2-dev (>= 2.0.10), "
+    "libsdl2-image-dev (>= 2.0.5), "
+    "libopengl0 (>= 1.0.0), "
+    "libglew-dev (>= 2.1.0), "
+    "libx11-dev (>= 2:1.6.0), "
+    "libxrandr-dev (>= 2:1.5.0), "
+    "libxinerama-dev (>= 2:1.1.0), "
+    "libxcursor-dev (>= 1:1.2.0), "
+    "libxi-dev (>= 2:1.7.0)"
+)
+
+# Activer CPack
+include(CPack)

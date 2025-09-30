@@ -41,6 +41,12 @@ public:
     ~InputManager();
     
     /**
+     * Initialise le gestionnaire d'entrée
+     * @return true si l'initialisation a réussi, false sinon
+     */
+    bool initialize();
+    
+    /**
      * Configure l'intégration avec GTK et la fenêtre principale
      * @param window Pointeur vers la fenêtre principale
      * @param cursorManager Pointeur partagé vers le gestionnaire de curseur

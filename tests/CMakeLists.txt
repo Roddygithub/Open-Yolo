@@ -1,66 +1,105 @@
 # Fichier CMake pour les tests
 
-# Version minimale requise de CMake
-cmake_minimum_required(VERSION 3.15)
+# Activer les tests si l'option est activée
+if(BUILD_TESTS)
+    # Trouver Google Test
+    find_package(GTest REQUIRED)
+    include(GoogleTest)
 
-# Configuration for tests
-set(TEST_SOURCES
-    test_cursormanager.cpp
-    test_gui.cpp
-)
+    # Définir les sources de test
+    set(TEST_SOURCES
+        test_cursormanager.cpp
+        test_gui.cpp
+        test_input.cpp
+        test_displaymanager.cpp
+    )
 
-# Find required packages
-find_package(GTest REQUIRED)
-find_package(OpenGL REQUIRED)
-find_package(SDL2 REQUIRED)
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(GTKMM REQUIRED gtkmm-3.0>=3.22.0)
+    # Créer l'exécutable de test
+    add_executable(${PROJECT_NAME}-tests ${TEST_SOURCES})
 
-# Find SDL2_image using pkg-config
-pkg_check_modules(SDL2IMAGE REQUIRED SDL2_image>=2.0.5)
-include(GoogleTest)
+    # Inclure les répertoires nécessaires
+    target_include_directories(${PROJECT_NAME}-tests
+        PRIVATE
+            ${CMAKE_SOURCE_DIR}/include
+            ${CMAKE_SOURCE_DIR}/src
+            ${GTKMM_INCLUDE_DIRS}
+            ${SDL2_INCLUDE_DIRS}
+            ${SDL2_IMAGE_INCLUDE_DIRS}
+            ${GLEW_INCLUDE_DIRS}
+            ${GIF_INCLUDE_DIRS}
+            ${OPENGL_INCLUDE_DIR}
+    )
 
-# Add test executable
-add_executable(open-yolo-tests ${TEST_SOURCES})
+    # Définitions de compilation
+    target_compile_definitions(${PROJECT_NAME}-tests
+        PRIVATE
+            ${GTKMM_CFLAGS_OTHER}
+    )
 
-# Link libraries
-target_link_libraries(open-yolo-tests
-    PRIVATE
-    GTest::GTest
-    GTest::Main
-    ${CMAKE_THREAD_LIBS_INIT}
-    OpenGL::GL
-    ${SDL2_LIBRARIES}
-    ${SDL2IMAGE_LIBRARIES}
-    ${GTKMM_LIBRARIES}
-    OpenYoloLib
-)
+    # Lier les dépendances
+    target_link_libraries(${PROJECT_NAME}-tests
+        PRIVATE
+            GTest::GTest
+            GTest::Main
+            ${CMAKE_THREAD_LIBS_INIT}
+            config
+            cursormanager
+            displaymanager
+            gui
+            input
+            ${GTKMM_LIBRARIES}
+            ${SDL2_LIBRARIES}
+            ${SDL2_IMAGE_LIBRARIES}
+            ${GLEW_LIBRARIES}
+            ${GIF_LIBRARIES}
+            OpenGL::GL
+    )
 
-# Include directories
-target_include_directories(open-yolo-tests
-    PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/include/cursormanager
-    ${CMAKE_SOURCE_DIR}/include/input
-    ${CMAKE_SOURCE_DIR}/include/displaymanager
-    ${CMAKE_SOURCE_DIR}/include/gui
-    ${GTKMM_INCLUDE_DIRS}
-    ${SDL2_INCLUDE_DIRS}
-    ${SDL2IMAGE_INCLUDE_DIRS}
-    ${GLEW_INCLUDE_DIRS}
-    ${GIF_INCLUDE_DIRS}
-    ${OPENGL_INCLUDE_DIR}
-)
+    # Activer la couverture de code si demandé
+    if(ENABLE_COVERAGE)
+        target_compile_options(${PROJECT_NAME}-tests
+            PRIVATE --coverage
+        )
+        target_link_libraries(${PROJECT_NAME}-tests
+            PRIVATE --coverage
+        )
+    endif()
 
-# Compile definitions
-target_compile_definitions(open-yolo-tests
-    PRIVATE
-    ${GTKMM_CFLAGS_OTHER}
-)
+    # Activer les sanitizers si demandé
+    if(ENABLE_ASAN)
+        target_compile_options(${PROJECT_NAME}-tests
+            PRIVATE -fsanitize=address -fno-omit-frame-pointer
+        )
+        target_link_libraries(${PROJECT_NAME}-tests
+            PRIVATE -fsanitize=address
+        )
+    endif()
 
-# Copy shaders to build directory
-file(GLOB SHADER_FILES "${CMAKE_SOURCE_DIR}/src/cursormanager/shaders/*.glsl")
-file(COPY ${SHADER_FILES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/shaders)
+    # Créer le répertoire pour les résultats des tests
+    file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/test_results)
 
-# Add tests
-gtest_discover_tests(open-yolo-tests)
+    # Copier les shaders vers le répertoire de build
+    file(GLOB SHADER_FILES "${CMAKE_SOURCE_DIR}/src/cursormanager/shaders/*.glsl")
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/shaders)
+    file(COPY ${SHADER_FILES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/shaders)
+
+    # Ajouter les tests à CTest
+    gtest_discover_tests(${PROJECT_NAME}-tests
+        EXTRA_ARGS --gtest_output=xml:${CMAKE_BINARY_DIR}/test_results/${PROJECT_NAME}-tests.xml
+    )
+
+    # Installation des binaires de test
+    install(TARGETS ${PROJECT_NAME}-tests
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+
+    # Message de configuration
+    message(STATUS "Tests activés")
+    message(STATUS "  - Exécuter les tests avec: ctest -V")
+    if(ENABLE_COVERAGE)
+        message(STATUS "  - Couverture de code activée")
+    endif()
+    if(ENABLE_ASAN)
+        message(STATUS "  - AddressSanitizer activé")
+    endif()
+endif()
