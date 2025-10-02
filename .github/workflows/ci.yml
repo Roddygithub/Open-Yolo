@@ -383,19 +383,20 @@ jobs:
   # ============================================
   # Update Build Badge
   # ============================================
-  update-badge:
-    name: Update Build Badge
-    needs: [test-linux, test-windows, test-nixos, code-quality]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-    - name: Create badge
-      uses: schneegans/dynamic-badges-action@v1.7.0
-      with:
-        auth: ${{ secrets.GIST_SECRET }}
-        gistID: your-gist-id
-        filename: openyolo-build-badge.json
-        label: Build
-        message: Passing
-        color: brightgreen
+  # update-badge:
+  #   name: Update Build Badge
+  #   needs: [test-linux, test-windows, test-nixos, code-quality]
+  #   runs-on: ubuntu-latest
+  #   if: github.ref == 'refs/heads/main'
+  #   
+  #   steps:
+  #   # Gist badge is disabled - requires GIST_SECRET to be set up in repository secrets
+  #   # - name: Create badge
+  #   #   uses: schneegans/dynamic-badges-action@v1.7.0
+  #   #   with:
+  #   #     auth: ${{ secrets.GIST_SECRET }}
+  #   #     gistID: your-gist-id
+  #   #     filename: openyolo-build-badge.json
+  #   #     label: Build
+  #   #     message: Passing
+  #   #     color: brightgreen

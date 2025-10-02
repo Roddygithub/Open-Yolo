@@ -24,35 +24,35 @@ fi
 # Nettoyer les anciens builds
 echo -e "${YELLOW}[1/5]${NC} Nettoyage des anciens builds..."
 rm -rf build-test
+LOG_DIR="build-test/logs"
+mkdir -p "${LOG_DIR}"
+CMAKE_LOG="${LOG_DIR}/cmake.log"
+MAKE_LOG="${LOG_DIR}/make.log"
+CTEST_LOG="${LOG_DIR}/ctest.log"
 mkdir -p build-test
 
 # Configuration
 echo -e "${YELLOW}[2/5]${NC} Configuration CMake..."
 cd build-test
-cmake .. \
-    -DCMAKE_BUILD_TYPE=Debug \
-    -DBUILD_TESTS=ON \
-    -DENABLE_LOGGING=ON \
-    -DENABLE_WARNINGS_AS_ERRORS=OFF \
-    > /dev/null 2>&1
+cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON > "${CMAKE_LOG}" 2>&1
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✓${NC} Configuration réussie"
 else
     echo -e "${RED}✗${NC} Échec de la configuration"
+    echo -e "${YELLOW}Logs disponibles dans : ${BLUE}${CMAKE_LOG}${NC}"
     exit 1
 fi
 
 # Compilation
 echo -e "${YELLOW}[3/5]${NC} Compilation du projet..."
-make -j$(nproc) > /dev/null 2>&1
+make -j$(nproc) > "${MAKE_LOG}" 2>&1
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✓${NC} Compilation réussie"
 else
     echo -e "${RED}✗${NC} Échec de la compilation"
-    echo -e "${YELLOW}Tentative de compilation avec sortie détaillée...${NC}"
-    make VERBOSE=1
+    echo -e "${YELLOW}Logs disponibles dans : ${BLUE}${MAKE_LOG}${NC}"
     exit 1
 fi
 
@@ -73,11 +73,12 @@ fi
 
 # Tests
 echo -e "${YELLOW}[5/5]${NC} Exécution des tests..."
-if ctest --output-on-failure > /dev/null 2>&1; then
+if ctest --output-on-failure > "${CTEST_LOG}" 2>&1; then
     echo -e "${GREEN}✓${NC} Tous les tests sont passés"
 else
-    echo -e "${YELLOW}⚠${NC} Certains tests ont échoué (voir ci-dessus)"
-    ctest --output-on-failure
+    echo -e "${RED}✗${NC} Certains tests ont échoué"
+    echo -e "${YELLOW}Logs disponibles dans : ${BLUE}${CTEST_LOG}${NC}"
+    cat "${CTEST_LOG}"
 fi
 
 cd ..

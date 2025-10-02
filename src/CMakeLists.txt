@@ -1,21 +1,72 @@
 # Fichier CMake pour le répertoire src
 
-# Liste des fichiers sources
-set(SOURCES
-    main.cpp
-    config/ConfigManager.cpp
-    cursormanager/CursorManager.cpp
-    cursormanager/ShaderProgram.cpp
-    displaymanager/DisplayManager.cpp
-    gui/MainWindow.cpp
-    input/InputManager.cpp
-    log/Logger.cpp
+# =============================================================================
+# 0. En-têtes précompilés (PCH)
+# =============================================================================
+# Crée un en-tête précompilé pour accélérer la compilation.
+set(PCH_HEADER "${CMAKE_SOURCE_DIR}/include/stdafx.h")
+
+# Applique le PCH à toutes les cibles de ce répertoire et des sous-répertoires.
+# Note: Chaque cible doit inclure "stdafx.h" en premier.
+target_precompile_headers(OpenYolo PUBLIC $<BUILD_INTERFACE:${PCH_HEADER}>)
+
+# =============================================================================
+# 1. Définition des modules en tant que bibliothèques d'objets
+# =============================================================================
+# Cette approche améliore la modularité et les temps de compilation.
+
+# Module de configuration
+add_library(config OBJECT config/ConfigManager.cpp)
+target_include_directories(config PUBLIC ${CMAKE_SOURCE_DIR}/include)
+
+# Module de gestion du curseur
+add_library(cursormanager OBJECT cursormanager/CursorManager.cpp cursormanager/ShaderProgram.cpp)
+target_include_directories(cursormanager PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_link_libraries(cursormanager PUBLIC config OpenGL::GL GLEW::GLEW)
+
+# Module de gestion de l'affichage
+add_library(displaymanager OBJECT displaymanager/DisplayManager.cpp)
+target_include_directories(displaymanager PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_link_libraries(displaymanager PUBLIC
+    ${X11_LIBRARIES}
+    ${X11_X11_LIB}
+    ${X11_Xrandr_LIB}
 )
 
+# Module de l'interface graphique
+add_library(gui OBJECT gui/MainWindow.cpp)
+target_include_directories(gui PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(gui PUBLIC
+    ${GTKMM3_INCLUDE_DIRS}
+)
+target_link_libraries(gui PUBLIC
+    config cursormanager displaymanager input log
+    ${GTKMM3_LIBRARIES}
+)
+
+# Module de gestion des entrées
+add_library(input OBJECT input/InputManager.cpp)
+target_include_directories(input PUBLIC ${CMAKE_SOURCE_DIR}/include)
+
+# Module de journalisation
+add_library(log OBJECT log/Logger.cpp)
+target_include_directories(log PUBLIC ${CMAKE_SOURCE_DIR}/include)
+
+# =============================================================================
+# 2. Création de l'exécutable principal
+# =============================================================================
+
 # Création de l'exécutable
-add_executable(OpenYolo ${SOURCES})
+add_executable(OpenYolo main.cpp)
+
+# Liaison des bibliothèques d'objets à l'exécutable
+target_link_libraries(OpenYolo PRIVATE
+    gui # La liaison de 'gui' inclut transitivement les autres modules
+)
 
 # Configuration des propriétés de la cible
+# Les includes sont maintenant gérés par les bibliothèques d'objets,
+# mais on peut le laisser pour la compatibilité avec certains IDE.
 target_include_directories(OpenYolo PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/src
@@ -23,6 +74,7 @@ target_include_directories(OpenYolo PRIVATE
 
 # Configuration des propriétés de compilation
 target_compile_features(OpenYolo PRIVATE cxx_std_17)
+set_target_properties(OpenYolo PROPERTIES CXX_STANDARD 17)
 
 target_compile_options(OpenYolo PRIVATE
     $<$<CONFIG:Debug>:-g -O0>
@@ -37,53 +89,19 @@ target_compile_options(OpenYolo PRIVATE
     -Wno-deprecated-declarations
 )
 
-# Configuration des avertissements
-if(MSVC)
-    target_compile_options(OpenYolo PRIVATE /W4 /WX)
-    target_compile_definitions(OpenYolo PRIVATE _CRT_SECURE_NO_WARNINGS)
-else()
-    # Les avertissements sont déjà définis dans les options de compilation globales
-    # Désactiver temporairement les avertissements traités comme des erreurs
-    # if(ENABLE_WARNINGS_AS_ERRORS)
-    #     target_compile_options(OpenYolo PRIVATE -Werror)
-    # endif()
-endif()
-
-# Configuration des dépendances
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(GTKMM3 REQUIRED gtkmm-3.0)
-pkg_check_modules(GIOMM2_4 REQUIRED giomm-2.4)
-pkg_check_modules(GLIBMM2_4 REQUIRED glibmm-2.4)
-pkg_check_modules(CAIROMM1_0 REQUIRED cairomm-1.0)
-pkg_check_modules(SIGC2 REQUIRED sigc++-2.0)
-pkg_check_modules(SDL2 REQUIRED sdl2)
-pkg_check_modules(SDL2_IMAGE REQUIRED SDL2_image)
-find_package(OpenGL REQUIRED)
-find_package(GLEW REQUIRED)
-find_package(X11 REQUIRED)
-
-# Liaison des bibliothèques
+# Liaison des bibliothèques externes restantes
+# Les dépendances principales (GTK, OpenGL, X11) sont maintenant liées
+# aux bibliothèques d'objets qui les utilisent.
 target_link_libraries(OpenYolo PRIVATE
-    ${GTKMM3_LIBRARIES}
-    ${GIOMM2_4_LIBRARIES}
-    ${GLIBMM2_4_LIBRARIES}
-    ${CAIROMM1_0_LIBRARIES}
-    ${SIGC2_LIBRARIES}
     ${SDL2_LIBRARIES}
     ${SDL2_IMAGE_LIBRARIES}
-    ${OPENGL_LIBRARIES}
-    ${GLEW_LIBRARIES}
-    ${X11_LIBRARIES}
-    ${X11_X11_LIB}
-    ${X11_Xrandr_LIB}
-    ${X11_Xcursor_LIB}
-    ${X11_Xinerama_LIB}
-    ${X11_Xi_LIB}
     dl
     pthread
 )
 
-# Installation
+# =============================================================================
+# 3. Configuration de l'installation
+# =============================================================================
 target_include_directories(OpenYolo PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>

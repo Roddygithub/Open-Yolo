@@ -1,0 +1,23 @@
+FROM ubuntu:22.04
+
+# Installer les dépendances nécessaires
+RUN apt-get update && apt-get install -y \
+    curl \
+    jq \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Créer le répertoire de travail
+WORKDIR /workspace
+
+# Copier le script de publication
+COPY scripts/publish-github-release.sh /usr/local/bin/
+COPY GITHUB_RELEASE_v1.0.0.md /workspace/
+COPY CHANGELOG.md /workspace/
+COPY PKGBUILD /workspace/
+COPY assets/cursors /workspace/assets/cursors
+
+RUN chmod +x /usr/local/bin/publish-github-release.sh
+
+# Point d'entrée
+ENTRYPOINT ["/usr/local/bin/publish-github-release.sh"]

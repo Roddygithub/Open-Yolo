@@ -1,13 +1,21 @@
 #!/bin/bash
-# Script de publication automatique de la release GitHub v1.0.0
+# Script de publication automatique de la release GitHub
 
 set -e
 
-VERSION="1.0.0"
-TAG="v${VERSION}"
+# Configuration
 REPO_OWNER="Roddygithub"
 REPO_NAME="Open-Yolo"
-RELEASE_TITLE="Open-Yolo v${VERSION} – Première version stable pour Linux"
+
+# Récupérer la version depuis CMakeLists.txt
+VERSION=$(grep -oP 'project\(OpenYolo\s+VERSION\s+\K[0-9.]+' "${0%/*}/../CMakeLists.txt")
+if [ -z "$VERSION" ]; then
+    echo -e "\033[0;31m[ERREUR]\033[0m Impossible de déterminer la version depuis CMakeLists.txt"
+    exit 1
+fi
+
+TAG="v${VERSION}"
+RELEASE_TITLE="Open-Yolo v${VERSION} – Version stable pour Linux"
 
 # Couleurs
 RED='\033[0;31m'
@@ -157,13 +165,17 @@ SCREENSHOTS_DIR="docs/screenshots"
 
 # Vérifier les paquets
 if [ ! -d "$PACKAGES_DIR" ] || [ -z "$(ls -A $PACKAGES_DIR 2>/dev/null)" ]; then
-    log_error "Aucun paquet trouvé dans $PACKAGES_DIR/"
-    log_info "Génération des paquets..."
-    chmod +x scripts/build-packages.sh 2>/dev/null || true
-    ./scripts/build-packages.sh || {
-        log_error "Échec de génération des paquets"
+    log_warning "Aucun paquet trouvé dans $PACKAGES_DIR/"
+    if [ -f "scripts/build-packages.sh" ]; then
+        log_info "Tentative de génération des paquets..."
+        ./scripts/build-packages.sh || {
+            log_error "Échec de la génération des paquets. Publication annulée."
+            exit 1
+        }
+    else
+        log_error "Script 'build-packages.sh' non trouvé. Impossible de générer les paquets."
         exit 1
-    }
+    fi
 fi
 
 log_success "Paquets disponibles :"

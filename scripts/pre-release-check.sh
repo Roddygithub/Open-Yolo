@@ -3,7 +3,6 @@
 
 set -e
 
-VERSION="1.0.0"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -12,6 +11,14 @@ NC='\033[0m'
 
 ERRORS=0
 WARNINGS=0
+
+# Extraire dynamiquement la version depuis le fichier CMakeLists.txt principal
+VERSION=$(grep -oP 'project\(OpenYolo\s+VERSION\s+\K[0-9\.]+' CMakeLists.txt)
+if [ -z "$VERSION" ]; then
+    echo -e "${RED}[ERREUR]${NC} Impossible de déterminer la version depuis CMakeLists.txt"
+    exit 1
+fi
+echo -e "${BLUE}Vérification de la pré-release pour la version : ${YELLOW}$VERSION${NC}"
 
 echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}  Open-Yolo - Vérification Pré-Release${NC}"
@@ -69,24 +76,29 @@ if [ -d "build-test" ]; then
 fi
 mkdir build-test
 cd build-test
+LOG_DIR="../build-test-logs"
+mkdir -p "$LOG_DIR"
 
-if cmake .. -DCMAKE_BUILD_TYPE=Release > /dev/null 2>&1; then
+if cmake .. -DCMAKE_BUILD_TYPE=Release > "$LOG_DIR/cmake.log" 2>&1; then
     check_pass "Configuration CMake OK"
 else
     check_fail "Échec de la configuration CMake"
+    echo -e "   ${BLUE}Logs: $LOG_DIR/cmake.log${NC}"
     cd ..
     exit 1
 fi
 
-if make -j$(nproc) > /dev/null 2>&1; then
+if make -j$(nproc) > "$LOG_DIR/make.log" 2>&1; then
     check_pass "Compilation OK"
 else
     check_fail "Échec de la compilation"
+    echo -e "   ${BLUE}Logs: $LOG_DIR/make.log${NC}"
     cd ..
     exit 1
 fi
 
 cd ..
+rm -rf "$LOG_DIR" # Nettoyer les logs si tout s'est bien passé
 
 # 5. Vérifier le binaire
 echo -e "${YELLOW}[5/10]${NC} Vérification du binaire..."

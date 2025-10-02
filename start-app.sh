@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Enable debug mode and exit on error
-set -euo pipefail
+set -Eeuo pipefail
 
 # Configuration
 LOG_DIR="/var/log/open-yolo"
@@ -9,6 +9,9 @@ LOG_FILE="$LOG_DIR/open-yolo-$(date +%Y%m%d-%H%M%S).log"
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/open-yolo"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/open-yolo"
 DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/open-yolo"
+
+# Trap errors for better logging
+trap 'log "FATAL" "Script error on line $LINENO"' ERR
 
 # Create necessary directories
 mkdir -p "$LOG_DIR" "$CONFIG_DIR" "$CACHE_DIR" "$DATA_DIR"
@@ -22,13 +25,13 @@ log() {
     echo "[$timestamp] [$level] $message" | tee -a "$LOG_FILE"
 }
 
-# Initialize logging
-{
-    log "INFO" "=== Starting OpenYolo Application ==="
-    log "INFO" "Version: $(cat /workspace/VERSION 2>/dev/null || echo 'unknown')"
-    log "INFO" "Hostname: $(hostname)"
-    log "INFO" "User: $(whoami) (UID: $(id -u), GID: $(id -g))"
-} >> "$LOG_FILE" 2>&1
+init_logging() {
+    log "INFO" "========================================="
+    log "INFO" "    Starting OpenYolo Application"
+    log "INFO" "========================================="
+    log "INFO" "Version: $(</workspace/VERSION)"
+    log "INFO" "User: $(id -u -n) (UID: $(id -u), GID: $(id -g))"
+}
 
 # Function to check and install dependencies
 check_dependencies() {
@@ -187,6 +190,9 @@ check_libraries() {
 
 # Main execution
 main() {
+    # Initialize logging
+    init_logging
+
     # Check for required dependencies
     local required_deps=(
         "gtk3-demo" "glxinfo" "xrandr" "xdpyinfo"
@@ -259,56 +265,3 @@ main() {
 
 # Execute main function
 main "$@"
-
-# Capture the exit code
-APP_EXIT_CODE=${PIPESTATUS[0]}
-set -e
-
-# Log the exit status
-if [ $APP_EXIT_CODE -eq 0 ]; then
-    log "$BINARY_NAME exited successfully with code $APP_EXIT_CODE"
-else
-    log "ERROR: $BINARY_NAME exited with code $APP_EXIT_CODE"
-    log "Please check the logs at $LOG_FILE for more details"
-    
-    # If we have a core dump, log its location
-    if [ -f "core" ] || [ -f "core.*" ]; then
-        log "Core dump detected!"
-        log "To debug, run: gdb $BINARY_NAME core*"
-    fi
-fi
-
-exit $APP_EXIT_CODE
-
-# Show the last 50 lines of the log for debugging
-echo "=== Last 50 lines of log ===" | tee -a "$LOG_FILE"
-tail -n 50 "$LOG_FILE" | tee -a "$LOG_FILE"
-echo "============================" | tee -a "$LOG_FILE"
-
-# If there's a core dump, log it
-if [ -f "/tmp/core" ]; then
-    log "Core dump found at /tmp/core"
-    gdb -batch -ex "bt" ./OpenYolo /tmp/core 2>&1 | tee -a "$LOG_FILE"
-fi
-
-# Clean up
-if [ -n "$XVFB_PID" ]; then
-    log "Stopping Xvfb (PID: $XVFB_PID)"
-    kill -TERM "$XVFB_PID" 2>/dev/null || true
-fi
-
-exit $APP_EXIT_CODE
-    kill $XVFB_PID 2>/dev/null
-    exit 1
-fi
-
-# Run with error handling
-if ! ./OpenYolo "$@"; then
-    echo "Application crashed with exit code $?"
-    kill $XVFB_PID 2>/dev/null
-    exit 1
-fi
-
-# Cleanup
-kill $XVFB_PID 2>/dev/null
-exit 0

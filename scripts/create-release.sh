@@ -1,22 +1,31 @@
 #!/bin/bash
-# Script de création de release GitHub pour Open-Yolo v1.0.0
+# Script de création de release GitHub pour Open-Yolo
 
 set -e
-
-VERSION="1.0.0"
-TAG="v${VERSION}"
-RELEASE_TITLE="Open-Yolo v${VERSION} – Première version stable pour Linux"
-BRANCH="main"
 
 # Couleurs
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m'
+NC='\033[0m'  # No Color
+
+# Configuration
+BRANCH="main"
+REPO_OWNER="Roddygithub"
+REPO_NAME="Open-Yolo"
+
+# Récupérer la version depuis CMakeLists.txt
+VERSION=$(grep -oP 'project\(OpenYolo\s+VERSION\s+\K[0-9.]+' "${0%/*}/../CMakeLists.txt")
+if [ -z "$VERSION" ]; then
+    echo -e "${RED}[ERREUR]${NC} Impossible de déterminer la version depuis CMakeLists.txt"
+    exit 1
+fi
+
+RELEASE_TITLE="Open-Yolo v${VERSION}"
 
 echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}  Open-Yolo - Création Release v${VERSION}${NC}"
+echo -e "${BLUE}  Open-Yolo - Création ${RELEASE_TITLE}${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
 
@@ -147,9 +156,9 @@ cat > RELEASE_NOTES_v${VERSION}.md << 'EOF'
 
 | Fichier | Distribution | Taille | Description |
 |---------|--------------|--------|-------------|
-| `open-yolo_1.0.0_amd64.deb` | Debian/Ubuntu | ~2 MB | Paquet DEB avec dépendances |
-| `open-yolo-1.0.0-1.x86_64.rpm` | Fedora/RHEL | ~2 MB | Paquet RPM avec métadonnées |
-| `open-yolo-1.0.0-Linux.tar.gz` | Générique | ~3 MB | Archive portable |
+| \`open-yolo_${VERSION}_amd64.deb\` | Debian/Ubuntu | ~2 MB | Paquet DEB avec dépendances |
+| \`open-yolo-${VERSION}-1.x86_64.rpm\` | Fedora/RHEL | ~2 MB | Paquet RPM avec métadonnées |
+| \`open-yolo-${VERSION}-Linux.tar.gz\` | Générique | ~3 MB | Archive portable |
 | `PKGBUILD` | Arch Linux | - | Build depuis les sources |
 
 ### Documentation
