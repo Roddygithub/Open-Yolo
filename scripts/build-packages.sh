@@ -30,7 +30,11 @@ fi
 
 # Variables
 PROJECT_NAME="open-yolo"
-VERSION="1.0.0"
+VERSION=$(grep -oP 'project\(OpenYolo\s+VERSION\s+\K[0-9.]+' ../CMakeLists.txt)
+if [ -z "$VERSION" ]; then
+    log_error "Impossible de déterminer la version depuis CMakeLists.txt"
+    exit 1
+fi
 BUILD_DIR="build-package"
 PACKAGE_DIR="packages"
 
