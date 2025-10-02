@@ -1,6 +1,6 @@
 # Maintainer: Your Name <your.email@example.com>
 pkgname=open-yolo
-pkgver=1.0.0
+pkgver=1.0.1
 pkgrel=1
 pkgdesc="Gestionnaire de curseurs personnalisés pour Linux avec support des curseurs animés"
 arch=('x86_64')

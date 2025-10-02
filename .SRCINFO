@@ -1,0 +1,27 @@
+pkgbase = open-yolo
+	pkgdesc = Gestionnaire de curseurs personnalisés pour Linux avec support des curseurs animés
+	pkgver = 1.0.1
+	pkgrel = 1
+	url = https://github.com/Roddygithub/Open-Yolo
+	arch = x86_64
+	license = MIT
+	makedepends = cmake
+	makedepends = ninja
+	makedepends = git
+	makedepends = pkgconf
+	depends = gtkmm3
+	depends = sdl2
+	depends = sdl2_image
+	depends = glew
+	depends = giflib
+	depends = libx11
+	depends = libxrandr
+	depends = libxcursor
+	depends = libxinerama
+	depends = libxi
+	depends = mesa
+	optdepends = gtest: pour exécuter les tests unitaires
+	source = git+https://github.com/Roddygithub/Open-Yolo.git#tag=v1.0.1
+	sha256sums = SKIP
+
+pkgname = open-yolo

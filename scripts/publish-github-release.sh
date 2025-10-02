@@ -8,7 +8,7 @@ REPO_OWNER="Roddygithub"
 REPO_NAME="Open-Yolo"
 
 # Récupérer la version depuis CMakeLists.txt
-VERSION=$(grep -oP 'project\(OpenYolo\s+VERSION\s+\K[0-9.]+' "${0%/*}/../CMakeLists.txt")
+VERSION=$(grep -A 2 "project(OpenYolo" "${0%/*}/../CMakeLists.txt" | grep "VERSION" | awk '{print $2}')
 if [ -z "$VERSION" ]; then
     echo -e "\033[0;31m[ERREUR]\033[0m Impossible de déterminer la version depuis CMakeLists.txt"
     exit 1
@@ -303,11 +303,11 @@ if [ -f "CHANGELOG.md" ]; then
     upload_asset "CHANGELOG.md"
 fi
 
-# Upload du PKGBUILD
-if [ -f "PKGBUILD" ]; then
-    log_info "Upload du PKGBUILD..."
-    upload_asset "PKGBUILD"
-fi
+# Upload du PKGBUILD (déjà inclus dans le dossier packages)
+# if [ -f "PKGBUILD" ]; then
+#     log_info "Upload du PKGBUILD..."
+#     upload_asset "PKGBUILD"
+# fi
 
 echo ""
 
