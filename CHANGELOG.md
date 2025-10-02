@@ -5,6 +5,36 @@ Tous les changements notables de ce projet seront documentés dans ce fichier.
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [1.0.1] - 2025-10-02
+
+### 🔧 Corrigé
+
+#### Compatibilité C++17
+- Correction des problèmes de compilation avec GCC 15
+- Mise à jour des flags de compilation pour une meilleure conformité C++17
+- Résolution des avertissements de compilation sur les distributions récentes
+
+#### Améliorations des scripts
+- Mise à jour des scripts de publication pour une meilleure fiabilité
+- Ajout de vérifications supplémentaires dans les scripts de build
+- Documentation améliorée pour le processus de release
+
+#### Documentation
+- Mise à jour de la documentation pour refléter les changements C++17
+- Ajout d'exemples de configuration pour différentes distributions
+- Documentation des procédures de dépannage
+
+#### CI/CD
+- Amélioration des tests automatisés pour une meilleure couverture
+- Optimisation des temps de build
+- Vérification de la compatibilité avec les dernières versions des dépendances
+
+### 📦 Packaging
+- Mise à jour des fichiers de packaging pour les distributions cibles
+- Amélioration de la gestion des dépendances
+- Support amélioré pour les environnements conteneurisés
+
+
 ## [1.0.0] - 2025-09-30
 
 ### ✨ Ajouté
