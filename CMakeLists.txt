@@ -370,99 +370,91 @@ else()
         pkg_check_modules(WAYLAND_EGL wayland-egl)
         pkg_check_modules(WAYLAND_CURSOR wayland-cursor)
         pkg_check_modules(XKBCOMMON xkbcommon)
-    
-    if(WAYLAND_CLIENT_FOUND AND WAYLAND_EGL_FOUND AND WAYLAND_CURSOR_FOUND AND XKBCOMMON_FOUND)
-        message(STATUS "Wayland support enabled")
-        add_definitions(-DWAYLAND_ENABLED)
         
-        # Vérification de wayland-protocols
-        find_program(WAYLAND_SCANNER_EXECUTABLE NAMES wayland-scanner)
-        if(NOT WAYLAND_SCANNER_EXECUTABLE)
-            message(WARNING "wayland-scanner not found, Wayland protocols will not be generated")
-        else()
-            # Add Wayland protocols
-            find_package(PkgConfig REQUIRED)
-            pkg_check_modules(WAYLAND_PROTOCOLS wayland-protocols)
+        if(WAYLAND_CLIENT_FOUND AND WAYLAND_EGL_FOUND AND WAYLAND_CURSOR_FOUND AND XKBCOMMON_FOUND)
+            message(STATUS "Wayland support enabled")
+            add_definitions(-DWAYLAND_ENABLED)
             
-            if(WAYLAND_PROTOCOLS_FOUND)
-                pkg_get_variable(WAYLAND_PROTOCOLS_DIR wayland-protocols pkgdatadir)
-                message(STATUS "Found wayland-protocols in ${WAYLAND_PROTOCOLS_DIR}")
+            # Vérification de wayland-protocols
+            find_program(WAYLAND_SCANNER_EXECUTABLE NAMES wayland-scanner)
+            if(NOT WAYLAND_SCANNER_EXECUTABLE)
+                message(WARNING "wayland-scanner not found, Wayland protocols will not be generated")
+            else()
+                # Add Wayland protocols
+                find_package(PkgConfig REQUIRED)
+                pkg_check_modules(WAYLAND_PROTOCOLS wayland-protocols)
                 
-                # Add Wayland protocol files
-                set(WAYLAND_PROTOCOL_FILES
-                    "${WAYLAND_PROTOCOLS_DIR}/stable/xdg-shell/xdg-shell.xml"
-                    "${WAYLAND_PROTOCOLS_DIR}/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml"
-                    "${WAYLAND_PROTOCOLS_DIR}/stable/viewporter/viewporter.xml"
-                )
+                if(WAYLAND_PROTOCOLS_FOUND)
+                    pkg_get_variable(WAYLAND_PROTOCOLS_DIR wayland-protocols pkgdatadir)
+                    message(STATUS "Found wayland-protocols in ${WAYLAND_PROTOCOLS_DIR}")
+                    
+                    # Add Wayland protocol files
+                    set(WAYLAND_PROTOCOL_FILES
+                        "${WAYLAND_PROTOCOLS_DIR}/stable/xdg-shell/xdg-shell.xml"
+                        "${WAYLAND_PROTOCOLS_DIR}/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml"
+                        "${WAYLAND_PROTOCOLS_DIR}/stable/viewporter/viewporter.xml"
+                    )
+                endif()
             endif()
-        endif()
+            
+            # Add Wayland libraries
+            set(ALL_LIBS ${ALL_LIBS}
+                ${WAYLAND_CLIENT_LIBRARIES}
+                ${WAYLAND_EGL_LIBRARIES}
+                ${WAYLAND_CURSOR_LIBRARIES}
+                ${XKBCOMMON_LIBRARIES}
+            )
+            
+            # Add include directories
+            include_directories(
+                ${WAYLAND_CLIENT_INCLUDE_DIRS}
+                ${WAYLAND_EGL_INCLUDE_DIRS}
+                ${WAYLAND_CURSOR_INCLUDE_DIRS}
+                ${XKBCOMMON_INCLUDE_DIRS}
+            )
+        endif()  # End of Wayland check
         
-        # Add Wayland libraries
-        set(ALL_LIBS ${ALL_LIBS}
-            ${WAYLAND_CLIENT_LIBRARIES}
-            ${WAYLAND_EGL_LIBRARIES}
-            ${WAYLAND_CURSOR_LIBRARIES}
-            ${XKBCOMMON_LIBRARIES}
-        )
-        
-        # Add include directories
-        include_directories(
-            ${WAYLAND_CLIENT_INCLUDE_DIRS}
-            ${WAYLAND_EGL_INCLUDE_DIRS}
-            ${WAYLAND_CURSOR_INCLUDE_DIRS}
-            ${XKBCOMMON_INCLUDE_DIRS}
-        )
-        
-        # Generate Wayland protocols
-        foreach(proto ${WAYLAND_PROTOCOL_FILES})
-            if(EXISTS ${proto})
-                get_filename_component(proto_name ${proto} NAME_WE)
-                string(REPLACE "-" "_" proto_target ${proto_name})
-                
-                set(proto_client_header "${CMAKE_CURRENT_BINARY_DIR}/wayland/${proto_target}-client-protocol.h")
-                set(proto_src "${CMAKE_CURRENT_BINARY_DIR}/wayland/${proto_target}-protocol.c")
-                
-                add_custom_command(
-                    OUTPUT "${proto_client_header}" "${proto_src}"
-                    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/wayland"
-                    COMMAND wayland-scanner client-header < ${proto} > ${proto_client_header}
-                    COMMAND wayland-scanner private-code < ${proto} > ${proto_src}
-                    DEPENDS ${proto}
-                    COMMENT "Generating ${proto_name} protocol"
-                )
-                
-                list(APPEND WAYLAND_GENERATED_SOURCES ${proto_src})
-                list(APPEND WAYLAND_GENERATED_HEADERS ${proto_client_header})
-                include_directories(${CMAKE_CURRENT_BINARY_DIR}/wayland)
+            # Generate Wayland protocols if scanner is available
+            if(WAYLAND_SCANNER_EXECUTABLE AND WAYLAND_PROTOCOLS_FOUND)
+                foreach(proto ${WAYLAND_PROTOCOL_FILES})
+                    if(EXISTS ${proto})
+                        get_filename_component(proto_name ${proto} NAME_WE)
+                        string(REPLACE "-" "_" proto_target ${proto_name})
+                        
+                        set(proto_client_header "${CMAKE_CURRENT_BINARY_DIR}/wayland/${proto_target}-client-protocol.h")
+                        set(proto_src "${CMAKE_CURRENT_BINARY_DIR}/wayland/${proto_target}-protocol.c")
+                        
+                        add_custom_command(
+                            OUTPUT "${proto_client_header}" "${proto_src}"
+                            COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/wayland"
+                            COMMAND wayland-scanner client-header < ${proto} > ${proto_client_header}
+                            COMMAND wayland-scanner private-code < ${proto} > ${proto_src}
+                            DEPENDS ${proto}
+                            COMMENT "Generating ${proto_name} protocol"
+                        )
+                        
+                        list(APPEND WAYLAND_GENERATED_SOURCES ${proto_src})
+                        list(APPEND WAYLAND_GENERATED_HEADERS ${proto_client_header})
+                        include_directories(${CMAKE_CURRENT_BINARY_DIR}/wayland)
+                    endif()
+                endforeach()
             endif()
-        endforeach()
-        
-        # Add Wayland libraries
-        set(ALL_LIBS ${ALL_LIBS}
-            ${WAYLAND_CLIENT_LIBRARIES}
-            ${WAYLAND_EGL_LIBRARIES}
-            ${WAYLAND_CURSOR_LIBRARIES}
-            ${XKBCOMMON_LIBRARIES}
-        )
-        
-        # Add include directories
-        include_directories(
-            ${WAYLAND_CLIENT_INCLUDE_DIRS}
-            ${WAYLAND_EGL_INCLUDE_DIRS}
-            ${WAYLAND_CURSOR_INCLUDE_DIRS}
-            ${XKBCOMMON_INCLUDE_DIRS}
-        )
+        endif()  # End of UNIX AND NOT APPLE
     else()
-        message(WARNING "Wayland support disabled: required libraries not found")
-    endif()
+        message(STATUS "Skipping X11/Wayland on non-Linux/Apple system")
+    endif()  # End of UNIX check
     
     message(STATUS "Using Unix/Linux pkg-config for libraries")
-endif()
+endif()  # End of WIN32 else
+
+# Common dependencies
 find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
 
-# X11
-find_package(X11 REQUIRED)
+# X11 (only required on Linux/Unix)
+if(UNIX AND NOT APPLE)
+    find_package(X11 REQUIRED)
+endif()
 
 # Ajout du sous-répertoire src
 add_subdirectory(src)
