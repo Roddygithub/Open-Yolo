@@ -305,49 +305,112 @@ else()
     # Linux/Unix package finding using pkg-config
     find_package(PkgConfig REQUIRED)
     
+    # Détection des dépendances de base
+    find_package(PkgConfig REQUIRED)
+    
     # SDL2 et SDL2_image via pkg-config
     pkg_check_modules(SDL2 REQUIRED sdl2)
-    pkg_check_modules(SDL2_IMAGE REQUIRED SDL2_image)
+    pkg_check_modules(SDL2_IMAGE REQUIRED sdl2_image)
     
-    # Combine all libraries
-    set(ALL_LIBS 
-        ${GTKMM3_LIBRARIES} 
-        ${GIOMM2_4_LIBRARIES} 
-        ${GLIBMM2_4_LIBRARIES} 
-        ${CAIROMM1_0_LIBRARIES} 
-        ${SIGC2_LIBRARIES} 
-        ${SDL2_LIBRARIES} 
-        ${SDL2_IMAGE_LIBRARIES}
+    # Détection de GTKmm et dépendances
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GTKMM3 REQUIRED gtkmm-3.0)
+    pkg_check_modules(GIOMM2_4 REQUIRED giomm-2.4)
+    pkg_check_modules(GLIBMM2_4 REQUIRED glibmm-2.4)
+    pkg_check_modules(CAIROMM1_0 REQUIRED cairomm-1.0)
+    pkg_check_modules(SIGC2 REQUIRED sigc++-2.0)
+    
+    # Détection d'OpenGL
+    find_package(OpenGL REQUIRED)
+    
+    # Détection de GLEW
+    find_package(GLEW REQUIRED)
+    
+    # Configuration des chemins d'inclusion
+    include_directories(
+        ${SDL2_INCLUDE_DIRS}
+        ${SDL2_IMAGE_INCLUDE_DIRS}
+        ${GTKMM3_INCLUDE_DIRS}
+        ${GIOMM2_4_INCLUDE_DIRS}
+        ${GLIBMM2_4_INCLUDE_DIRS}
+        ${CAIROMM1_0_INCLUDE_DIRS}
+        ${SIGC2_INCLUDE_DIRS}
+        ${OPENGL_INCLUDE_DIR}
+        ${GLEW_INCLUDE_DIRS}
     )
     
-    # Add X11 and other Unix-specific libraries
+    # Configuration des bibliothèques
+    set(ALL_LIBS 
+        ${GTKMM3_LIBRARIES}
+        ${GIOMM2_4_LIBRARIES}
+        ${GLIBMM2_4_LIBRARIES}
+        ${CAIROMM1_0_LIBRARIES}
+        ${SIGC2_LIBRARIES}
+        ${SDL2_LIBRARIES}
+        ${SDL2_IMAGE_LIBRARIES}
+        ${OPENGL_LIBRARIES}
+        ${GLEW_LIBRARIES}
+    )
+    
+    # Configuration spécifique à X11/Wayland
     if(UNIX AND NOT APPLE)
-    # X11
-    find_package(X11 REQUIRED)
-    if(X11_FOUND)
-        include_directories(${X11_INCLUDE_DIR})
-        set(ALL_LIBS ${ALL_LIBS} ${X11_LIBRARIES} X11 Xrandr Xcursor Xinerama Xi)
-    endif()
+        # Détection de X11
+        find_package(X11)
+        if(X11_FOUND)
+            message(STATUS "X11 support enabled")
+            include_directories(${X11_INCLUDE_DIR})
+            set(ALL_LIBS ${ALL_LIBS} ${X11_LIBRARIES} X11 Xrandr Xcursor Xinerama Xi)
+            add_definitions(-DX11_ENABLED)
+        else()
+            message(WARNING "X11 not found, X11 support will be disabled")
+        endif()
 
-    # Wayland specific dependencies
-    pkg_check_modules(WAYLAND_CLIENT wayland-client)
-    pkg_check_modules(WAYLAND_EGL wayland-egl)
-    pkg_check_modules(WAYLAND_CURSOR wayland-cursor)
-    pkg_check_modules(XKBCOMMON xkbcommon)
+        # Détection de Wayland
+        pkg_check_modules(WAYLAND_CLIENT wayland-client)
+        pkg_check_modules(WAYLAND_EGL wayland-egl)
+        pkg_check_modules(WAYLAND_CURSOR wayland-cursor)
+        pkg_check_modules(XKBCOMMON xkbcommon)
     
     if(WAYLAND_CLIENT_FOUND AND WAYLAND_EGL_FOUND AND WAYLAND_CURSOR_FOUND AND XKBCOMMON_FOUND)
         message(STATUS "Wayland support enabled")
         add_definitions(-DWAYLAND_ENABLED)
         
-        # Add Wayland protocols
-        find_package(PkgConfig REQUIRED)
-        pkg_get_variable(WAYLAND_PROTOCOLS_DIR wayland-protocols pkgdatadir)
+        # Vérification de wayland-protocols
+        find_program(WAYLAND_SCANNER_EXECUTABLE NAMES wayland-scanner)
+        if(NOT WAYLAND_SCANNER_EXECUTABLE)
+            message(WARNING "wayland-scanner not found, Wayland protocols will not be generated")
+        else()
+            # Add Wayland protocols
+            find_package(PkgConfig REQUIRED)
+            pkg_check_modules(WAYLAND_PROTOCOLS wayland-protocols)
+            
+            if(WAYLAND_PROTOCOLS_FOUND)
+                pkg_get_variable(WAYLAND_PROTOCOLS_DIR wayland-protocols pkgdatadir)
+                message(STATUS "Found wayland-protocols in ${WAYLAND_PROTOCOLS_DIR}")
+                
+                # Add Wayland protocol files
+                set(WAYLAND_PROTOCOL_FILES
+                    "${WAYLAND_PROTOCOLS_DIR}/stable/xdg-shell/xdg-shell.xml"
+                    "${WAYLAND_PROTOCOLS_DIR}/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml"
+                    "${WAYLAND_PROTOCOLS_DIR}/stable/viewporter/viewporter.xml"
+                )
+            endif()
+        endif()
         
-        # Add Wayland protocol files
-        set(WAYLAND_PROTOCOL_FILES
-            "${WAYLAND_PROTOCOLS_DIR}/stable/xdg-shell/xdg-shell.xml"
-            "${WAYLAND_PROTOCOLS_DIR}/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml"
-            "${WAYLAND_PROTOCOLS_DIR}/stable/viewporter/viewporter.xml"
+        # Add Wayland libraries
+        set(ALL_LIBS ${ALL_LIBS}
+            ${WAYLAND_CLIENT_LIBRARIES}
+            ${WAYLAND_EGL_LIBRARIES}
+            ${WAYLAND_CURSOR_LIBRARIES}
+            ${XKBCOMMON_LIBRARIES}
+        )
+        
+        # Add include directories
+        include_directories(
+            ${WAYLAND_CLIENT_INCLUDE_DIRS}
+            ${WAYLAND_EGL_INCLUDE_DIRS}
+            ${WAYLAND_CURSOR_INCLUDE_DIRS}
+            ${XKBCOMMON_INCLUDE_DIRS}
         )
         
         # Generate Wayland protocols
