@@ -80,7 +80,12 @@ jobs:
           libcairomm-1.0-dev \
           libgtest-dev \
           xvfb \
-          xauth
+          xauth \
+          libwayland-dev \
+          wayland-protocols \
+          libwayland-egl-backend-dev \
+          libxkbcommon-dev \
+          libwayland-cursor0
 
     - name: Install dependencies (Fedora)
       if: startsWith(matrix.container, 'fedora')
@@ -98,26 +103,33 @@ jobs:
           giflib-devel \
           xorg-x11-server-devel \
           libxcb-devel \
+          wayland-devel \
+          wayland-protocols-devel \
+          libxkbcommon-devel \
+          wayland-utils \
           cairo-devel \
-          cairomm-devel \
           gtest-devel \
           xorg-x11-server-Xvfb \
           xorg-x11-xauth
 
     - name: Install dependencies (Arch)
-      if: startsWith(matrix.container, 'archlinux')
+      if: startsWith(matrix.container, 'archlinux') || startsWith(matrix.container, 'cachyos')
       run: |
-        pacman -Sy --noconfirm \
+        pacman -Sy --noconfirm --needed \
           base-devel \
           cmake \
           ninja \
-          gtkmm3 \
+          gtk3 \
           sdl2 \
           sdl2_image \
-          mesa \
           glew \
           giflib \
-          libx11 \
+          xorg-server-xvfb \
+          xorg-xauth \
+          wayland \
+          wayland-protocols \
+          libxkbcommon \
+          wayland-utils \
           libxrandr \
           libxcursor \
           cairo \

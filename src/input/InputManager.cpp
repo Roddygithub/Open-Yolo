@@ -1,6 +1,9 @@
 #include "../../include/input/InputManager.hpp"
 #include "../../include/gui/MainWindow.hpp"
+#include "backends/X11Backend.hpp" // Nous allons créer ce fichier ensuite
+#include "backends/WaylandBackend.hpp"
 
+#include <X11/Xlib.h>
 // Standard C++
 #include <algorithm> // Pour std::find_if
 #include <iostream>
@@ -19,27 +22,20 @@
 #include <glibmm/ustring.h>
 #include <gtkmm/application.h>
 #include <gtkmm/window.h>
-
-InputManager::InputManager() 
-    : mainWindow_(nullptr) {
-    
-    // Initialisation du gestionnaire d'affichage
-    display_ = Gdk::Display::get_default();
-    if (display_) {
-        // Obtenir le gestionnaire de périphériques
-        deviceManager_ = display_->get_device_manager();
-        
-        if (deviceManager_) {
-            // Dans GTK3, nous devons surveiller manuellement les changements de périphériques
-            // car les signaux signal_device_added/removed ne sont pas disponibles
-            // Nous allons initialiser les périphériques maintenant
-            initializeInputDevices();
-            
-            // Planifier une vérification périodique des périphériques
-            Glib::signal_timeout().connect(
-                sigc::mem_fun(*this, &InputManager::checkForDeviceChanges),
-                2000); // Vérifier toutes les 2 secondes
-        }
+ 
+InputManager::InputManager() : mainWindow_(nullptr) {
+    // Détecter si nous sommes sur Wayland ou X11
+    // GDK_IS_X11_DISPLAY est une macro pratique pour cela.
+    auto display = Gdk::Display::get_default();
+    if (display && GDK_IS_X11_DISPLAY(display->gobj())) {
+        std::cout << "Backend X11 détecté. Initialisation de X11Backend." << std::endl;
+        backend_ = std::make_unique<input::X11Backend>();
+    } else if (display && GDK_IS_WAYLAND_DISPLAY(display->gobj())) {
+        std::cout << "Backend Wayland détecté. Initialisation de WaylandBackend." << std::endl;
+        backend_ = std::make_unique<input::WaylandBackend>();
+        // std::cerr << "Le backend Wayland n'est pas encore implémenté." << std::endl;
+    } else {
+        std::cerr << "Serveur d'affichage non supporté." << std::endl;
     }
 }
 
@@ -49,14 +45,19 @@ InputManager::~InputManager() {
 }
 
 bool InputManager::initialize() {
-    // L'initialisation est déjà effectuée dans le constructeur
-    // Cette méthode existe pour la compatibilité avec l'interface
-    return display_ && deviceManager_;
+    // L'initialisation est déléguée au backend.
+    // On lui passe un callback pour qu'il puisse nous notifier des raccourcis pressés.
+    return backend_ ? backend_->initialize() : false;
 }
 
 void InputManager::setupGTKIntegration(MainWindow* window, std::shared_ptr<cursor_manager::CursorManager> cursorManager) {
     if (!window) {
         throw std::invalid_argument("La fenêtre principale ne peut pas être nulle");
+    }
+
+    if (backend_) {
+        // Fournir la fenêtre au backend (surtout utile pour Wayland)
+        backend_->setWindow(window);
     }
 
     mainWindow_ = window;
@@ -65,85 +66,33 @@ void InputManager::setupGTKIntegration(MainWindow* window, std::shared_ptr<curso
     // Dans GTKMM 3.0, on connecte directement les signaux de la fenêtre
     window->signal_key_press_event().connect(
         sigc::mem_fun(*this, &InputManager::onKeyPressed), false);
-    
-    // Initialiser les périphériques connectés
-    initializeInputDevices();
 }
 
 bool InputManager::registerShortcut(const std::string& name, const std::string& accelerator, const KeyCallback& callback) {
-    if (name.empty()) {
-        throw std::invalid_argument("Le nom du raccourci ne peut pas être vide");
+    // Déléguer l'enregistrement au backend
+    if (backend_) {
+        return backend_->registerShortcut(name, accelerator, callback);
     }
     
-    // Vérifier si le raccourci existe déjà
-    {
-        std::lock_guard<std::mutex> lock(shortcutsMutex_);
-        if (shortcuts_.find(name) != shortcuts_.end()) {
-            return false; // Le raccourci existe déjà
-        }
-    }
-    
-    // Parser l'accélérateur
-    guint key = 0;
-    Gdk::ModifierType mods;
-    if (!parseAccelerator(accelerator, key, mods)) {
-        std::cerr << "Format d'accélérateur invalide: " << accelerator << std::endl;
-        return false;
-    }
-    
-    // Ajouter le raccourci
-    {
-        std::lock_guard<std::mutex> lock(shortcutsMutex_);
-        shortcuts_.emplace(name, Shortcut{accelerator, key, mods, callback});
-    }
-    
-    return true;
+    return false;
 }
 
 bool InputManager::onKeyPressed(GdkEventKey* event) {
-    if (!event) return false;
-    
-    // Convertir l'état des modificateurs pour la correspondance
-    Gdk::ModifierType effective_mods = static_cast<Gdk::ModifierType>(event->state & (
-        GDK_SHIFT_MASK | 
-        GDK_CONTROL_MASK | 
-        GDK_MOD1_MASK |  // Alt key in GTK3
-        GDK_SUPER_MASK));
-
-    // Vérifier si un raccourci correspond à la combinaison de touches
-    for (const auto& pair : shortcuts_) {
-        const auto& name = pair.first;
-        const auto& shortcut = pair.second;
-        
-        if (shortcut.accelKey == event->keyval && shortcut.mods == effective_mods) {
-            // Exécuter le callback du raccourci
-            if (shortcut.callback) {
-                shortcut.callback();
-                return true; // Événement traité
-            }
-        }
+    if (backend_) {
+        return backend_->onKeyPressed(event);
     }
     
     // Laisser l'événement se propager
     return false;
 }
 
-void InputManager::removeShortcut(const std::string& name) {
+bool InputManager::removeShortcut(const std::string& name) {
     if (name.empty()) {
         throw std::invalid_argument("Le nom du raccourci ne peut pas être vide");
     }
 
-    std::lock_guard<std::mutex> lock(shortcutsMutex_);
-    
-    auto it = shortcuts_.find(name);
-    if (it != shortcuts_.end()) {
-        shortcuts_.erase(it);
-        std::cout << "Raccourci supprimé: " << name << std::endl;
-    } else {
-        std::cerr << "Avertissement: Tentative de supprimer un raccourci inexistant: " 
-                 << name << std::endl;
-        throw std::out_of_range("Le raccourci spécifié n'existe pas");
-    }
+    // Déléguer la suppression au backend
+    return backend_ ? backend_->unregisterShortcut(name) : false;
 }
 
 bool InputManager::parseAccelerator(const std::string& accel, guint& key, Gdk::ModifierType& mods) const {
@@ -182,91 +131,4 @@ bool InputManager::parseAccelerator(const std::string& accel, guint& key, Gdk::M
     key = keyval;
     mods = result_mods;
     return true;
-}
-
-void InputManager::initializeInputDevices() {
-    if (!deviceManager_) return;
-    
-    try {
-        // Obtenir tous les périphériques maîtres (claviers et souris)
-        auto devices = deviceManager_->list_devices(Gdk::DEVICE_TYPE_MASTER);
-        
-        // Filtrer et ajouter uniquement les claviers
-        for (const auto& device : devices) {
-            if (device->get_source() == Gdk::SOURCE_KEYBOARD) {
-                std::lock_guard<std::mutex> lock(devicesMutex_);
-                keyboardDevices_.insert(device);
-                std::cout << "Clavier initial détecté: " << device->get_name() << std::endl;
-            }
-        }
-    } catch (const std::exception& e) {
-        std::cerr << "Erreur lors de l'initialisation des périphériques: " << e.what() << std::endl;
-    }
-}
-
-bool InputManager::checkForDeviceChanges() {
-    if (!deviceManager_) return true; // Continuer la vérification
-    
-    try {
-        std::set<Glib::ustring> currentDevices;
-        
-        // Obtenir la liste actuelle des périphériques clavier
-        auto devices = deviceManager_->list_devices(Gdk::DEVICE_TYPE_MASTER);
-        
-        // Identifier les périphériques clavier actuels
-        for (const auto& device : devices) {
-            if (device->get_source() == Gdk::SOURCE_KEYBOARD) {
-                currentDevices.insert(device->get_name());
-                
-                // Vérifier si ce périphérique est nouveau
-                std::lock_guard<std::mutex> lock(devicesMutex_);
-                if (keyboardDevices_.find(device) == keyboardDevices_.end()) {
-                    // Nouveau périphérique détecté
-                    keyboardDevices_.insert(device);
-                    std::cout << "Clavier connecté: " << device->get_name() << std::endl;
-                }
-            }
-        }
-        
-        // Vérifier les périphériques manquants
-        std::lock_guard<std::mutex> lock(devicesMutex_);
-        for (auto it = keyboardDevices_.begin(); it != keyboardDevices_.end(); ) {
-            if (currentDevices.find((*it)->get_name()) == currentDevices.end()) {
-                std::cout << "Clavier déconnecté: " << (*it)->get_name() << std::endl;
-                it = keyboardDevices_.erase(it);
-            } else {
-                ++it;
-            }
-        }
-        
-    } catch (const std::exception& e) {
-        std::cerr << "Erreur lors de la vérification des périphériques: " << e.what() << std::endl;
-    }
-    
-    return true; // Continuer la vérification périodique
-}
-
-void InputManager::onDeviceRemoved(const Glib::RefPtr<Gdk::Device>& device) {
-    if (!device) return;
-    
-    try {
-        // Vérifier si c'est un clavier
-        if (device->get_source() == Gdk::SOURCE_KEYBOARD) {
-            std::lock_guard<std::mutex> lock(devicesMutex_);
-            
-            // Vérifier si le périphérique est dans la liste avant de le supprimer
-            auto it = keyboardDevices_.find(device);
-            if (it != keyboardDevices_.end()) {
-                std::cout << "Clavier déconnecté: " << device->get_name() << std::endl;
-                keyboardDevices_.erase(it);
-                
-                // Vérifier s'il reste des claviers connectés
-                if (keyboardDevices_.empty()) {
-                    std::cerr << "Attention: Aucun clavier détecté!" << std::endl;
-                }
-            }
-        }
-    } catch (const std::exception& e) {
-        std::cerr << "Erreur lors de la suppression du périphérique: " << e.what() << std::endl;
-    }
 }

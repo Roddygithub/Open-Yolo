@@ -71,27 +71,23 @@ sudo apt-get install -y \
       libglew-dev \
       libgif-dev \
       xorg-dev \
+      wayland-protocols \
       libx11-xcb-dev \
       libwayland-dev \
-      libxkbcommon-dev
-  
-  # Pour les distributions basées sur Fedora
-  sudo dnf install -y \
-      gcc-c++ \
-      cmake \
-      git \
-      pkgconf-pkg-config \
-      gtkmm30-devel \
-      SDL2-devel \
-      SDL2_image-devel \
-      mesa-libGL-devel \
-      glew-devel \
-      giflib-devel \
-      xorg-x11-server-devel \
-      libxcb-devel \
-      wayland-devel \
-      libxkbcommon-devel
-  ```
+      libxkbcommon-dev \
+      libcairo2-dev \
+      libcairomm-1.0-dev
+```
+
+#### Fedora/RHEL
+```bash
+sudo dnf install -y \
+    gcc-c++ cmake ninja-build pkgconf-pkg-config git \
+    gtkmm30-devel SDL2-devel SDL2_image-devel \
+    mesa-libGL-devel glew-devel giflib-devel \
+    xorg-x11-server-devel wayland-protocols-devel libxcb-devel \
+    wayland-devel libxkbcommon-devel cairo-devel cairomm-devel
+```
 
 ### ⚠️ Compatibilité
 Ce projet est conçu spécifiquement pour les environnements Linux et utilise des API système spécifiques à Linux. Le support d'autres systèmes d'exploitation n'est pas prévu.

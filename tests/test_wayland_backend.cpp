@@ -74,6 +74,41 @@ protected:
 
 // --- TESTS ---
 
+TEST_F(WaylandBackendIntegrationTest, RegisterShortcut) {
+    input::WaylandBackend backend;
+    bool callback_called = false;
+    
+    // Test avec un raccourci valide
+    bool result = backend.registerShortcut(
+        "test_shortcut", 
+        "<Control><Shift>t", 
+        [&]() { callback_called = true; }
+    );
+    
+    EXPECT_TRUE(result) << "Failed to register shortcut";
+    
+    // Test avec un nom vide
+    result = backend.registerShortcut(
+        "", 
+        "<Control><Shift>t", 
+        [](){}
+    );
+    EXPECT_FALSE(result) << "Should fail with empty name";
+    
+    // Test avec un callback null
+    result = backend.registerShortcut(
+        "test_null_callback", 
+        "<Control><Shift>t", 
+        nullptr
+    );
+    EXPECT_FALSE(result) << "Should fail with null callback";
+    
+    // Nettoyage
+    if (result) {
+        backend.unregisterShortcut("test_shortcut");
+    }
+}
+
 TEST_F(WaylandBackendIntegrationTest, FullLifecycle) {
     input::WaylandBackend backend;
     bool initialized = false;

@@ -79,13 +79,13 @@ cd build-test
 LOG_DIR="../build-test-logs"
 mkdir -p "$LOG_DIR"
 
-if cmake .. -DCMAKE_BUILD_TYPE=Release > "$LOG_DIR/cmake.log" 2>&1; then
+if cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON > "$LOG_DIR/cmake.log" 2>&1; then
     check_pass "Configuration CMake OK"
 else
     check_fail "Échec de la configuration CMake"
     echo -e "   ${BLUE}Logs: $LOG_DIR/cmake.log${NC}"
     cd ..
-    exit 1
+    # Pas besoin de quitter, la suite des tests peut être pertinente
 fi
 
 if make -j$(nproc) > "$LOG_DIR/make.log" 2>&1; then
@@ -93,8 +93,6 @@ if make -j$(nproc) > "$LOG_DIR/make.log" 2>&1; then
 else
     check_fail "Échec de la compilation"
     echo -e "   ${BLUE}Logs: $LOG_DIR/make.log${NC}"
-    cd ..
-    exit 1
 fi
 
 cd ..
@@ -114,14 +112,10 @@ fi
 echo -e "${YELLOW}[6/10]${NC} Vérification des tests..."
 if [ -d "build-test" ]; then
     cd build-test
-    if cmake .. -DBUILD_TESTS=ON > /dev/null 2>&1 && make -j$(nproc) > /dev/null 2>&1; then
-        if ctest --output-on-failure > /dev/null 2>&1; then
-            check_pass "Tests unitaires OK"
-        else
-            check_warn "Certains tests ont échoué"
-        fi
+    if ctest --output-on-failure > /dev/null 2>&1; then
+        check_pass "Tests unitaires OK"
     else
-        check_warn "Impossible de compiler les tests"
+        check_warn "Certains tests ont échoué"
     fi
     cd ..
 else

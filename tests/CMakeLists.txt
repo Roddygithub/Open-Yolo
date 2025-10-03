@@ -12,6 +12,7 @@ if(BUILD_TESTS)
         test_gui.cpp
         test_input.cpp
         test_displaymanager.cpp
+        test_wayland_backend.cpp
     )
 
     # Créer l'exécutable de test
@@ -37,6 +38,25 @@ if(BUILD_TESTS)
     )
 
     # Lier les dépendances
+    # Ajout des dépendances pour Wayland si disponible
+    if(WAYLAND_CLIENT_FOUND AND WAYLAND_EGL_FOUND AND WAYLAND_CURSOR_FOUND AND XKBCOMMON_FOUND)
+        target_include_directories(${PROJECT_NAME}-tests
+            PRIVATE
+                ${WAYLAND_CLIENT_INCLUDE_DIRS}
+                ${WAYLAND_EGL_INCLUDE_DIRS}
+                ${WAYLAND_CURSOR_INCLUDE_DIRS}
+                ${XKBCOMMON_INCLUDE_DIRS}
+        )
+        
+        target_link_libraries(${PROJECT_NAME}-tests
+            PRIVATE
+                ${WAYLAND_CLIENT_LIBRARIES}
+                ${WAYLAND_EGL_LIBRARIES}
+                ${WAYLAND_CURSOR_LIBRARIES}
+                ${XKBCOMMON_LIBRARIES}
+        )
+    endif()
+
     target_link_libraries(${PROJECT_NAME}-tests
         PRIVATE
             GTest::GTest

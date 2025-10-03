@@ -300,18 +300,10 @@ if(WIN32)
         )
         set(ALL_RESOURCES ${CMAKE_BINARY_DIR}/OpenYolo.res)
     endif()
-    
     message(STATUS "Using Windows-specific library paths")
 else()
     # Linux/Unix package finding using pkg-config
     find_package(PkgConfig REQUIRED)
-    
-    # GTKmm et dépendances
-    pkg_check_modules(GTKMM3 REQUIRED gtkmm-3.0)
-    pkg_check_modules(GIOMM2_4 REQUIRED giomm-2.4)
-    pkg_check_modules(GLIBMM2_4 REQUIRED glibmm-2.4)
-    pkg_check_modules(CAIROMM1_0 REQUIRED cairomm-1.0)
-    pkg_check_modules(SIGC2 REQUIRED sigc++-2.0)
     
     # SDL2 et SDL2_image via pkg-config
     pkg_check_modules(SDL2 REQUIRED sdl2)
@@ -330,17 +322,79 @@ else()
     
     # Add X11 and other Unix-specific libraries
     if(UNIX AND NOT APPLE)
-        find_package(X11 REQUIRED)
-        if(X11_FOUND)
-            include_directories(${X11_INCLUDE_DIR})
-            set(ALL_LIBS ${ALL_LIBS} ${X11_LIBRARIES} X11 Xrandr Xcursor Xinerama Xi)
-        endif()
+    # X11
+    find_package(X11 REQUIRED)
+    if(X11_FOUND)
+        include_directories(${X11_INCLUDE_DIR})
+        set(ALL_LIBS ${ALL_LIBS} ${X11_LIBRARIES} X11 Xrandr Xcursor Xinerama Xi)
+    endif()
+
+    # Wayland specific dependencies
+    pkg_check_modules(WAYLAND_CLIENT wayland-client)
+    pkg_check_modules(WAYLAND_EGL wayland-egl)
+    pkg_check_modules(WAYLAND_CURSOR wayland-cursor)
+    pkg_check_modules(XKBCOMMON xkbcommon)
+    
+    if(WAYLAND_CLIENT_FOUND AND WAYLAND_EGL_FOUND AND WAYLAND_CURSOR_FOUND AND XKBCOMMON_FOUND)
+        message(STATUS "Wayland support enabled")
+        add_definitions(-DWAYLAND_ENABLED)
+        
+        # Add Wayland protocols
+        find_package(PkgConfig REQUIRED)
+        pkg_get_variable(WAYLAND_PROTOCOLS_DIR wayland-protocols pkgdatadir)
+        
+        # Add Wayland protocol files
+        set(WAYLAND_PROTOCOL_FILES
+            "${WAYLAND_PROTOCOLS_DIR}/stable/xdg-shell/xdg-shell.xml"
+            "${WAYLAND_PROTOCOLS_DIR}/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml"
+            "${WAYLAND_PROTOCOLS_DIR}/stable/viewporter/viewporter.xml"
+        )
+        
+        # Generate Wayland protocols
+        foreach(proto ${WAYLAND_PROTOCOL_FILES})
+            if(EXISTS ${proto})
+                get_filename_component(proto_name ${proto} NAME_WE)
+                string(REPLACE "-" "_" proto_target ${proto_name})
+                
+                set(proto_client_header "${CMAKE_CURRENT_BINARY_DIR}/wayland/${proto_target}-client-protocol.h")
+                set(proto_src "${CMAKE_CURRENT_BINARY_DIR}/wayland/${proto_target}-protocol.c")
+                
+                add_custom_command(
+                    OUTPUT "${proto_client_header}" "${proto_src}"
+                    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/wayland"
+                    COMMAND wayland-scanner client-header < ${proto} > ${proto_client_header}
+                    COMMAND wayland-scanner private-code < ${proto} > ${proto_src}
+                    DEPENDS ${proto}
+                    COMMENT "Generating ${proto_name} protocol"
+                )
+                
+                list(APPEND WAYLAND_GENERATED_SOURCES ${proto_src})
+                list(APPEND WAYLAND_GENERATED_HEADERS ${proto_client_header})
+                include_directories(${CMAKE_CURRENT_BINARY_DIR}/wayland)
+            endif()
+        endforeach()
+        
+        # Add Wayland libraries
+        set(ALL_LIBS ${ALL_LIBS}
+            ${WAYLAND_CLIENT_LIBRARIES}
+            ${WAYLAND_EGL_LIBRARIES}
+            ${WAYLAND_CURSOR_LIBRARIES}
+            ${XKBCOMMON_LIBRARIES}
+        )
+        
+        # Add include directories
+        include_directories(
+            ${WAYLAND_CLIENT_INCLUDE_DIRS}
+            ${WAYLAND_EGL_INCLUDE_DIRS}
+            ${WAYLAND_CURSOR_INCLUDE_DIRS}
+            ${XKBCOMMON_INCLUDE_DIRS}
+        )
+    else()
+        message(WARNING "Wayland support disabled: required libraries not found")
     endif()
     
     message(STATUS "Using Unix/Linux pkg-config for libraries")
 endif()
-
-# OpenGL
 find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
 
