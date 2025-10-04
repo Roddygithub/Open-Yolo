@@ -1,25 +1,39 @@
 #pragma once
 
-#include <functional>
-#include <string>
-#include <map>
-#include <memory>
-#include <mutex>
-#include <set>
-#include <gtkmm.h>
-#include <gdkmm/event.h>
-#include <gdkmm/display.h>
+// Standard C++
+#include <cstdint>    // Pour les types entiers
+#include <cstring>    // Pour memcpy, strlen, etc.
+#include <functional> // Pour std::function
+#include <map>        // Pour std::map
+#include <memory>     // Pour std::shared_ptr, etc.
+#include <mutex>      // Pour std::mutex
+#include <set>        // Pour std::set
+#include <string>     // Pour std::string
+#include <vector>     // Pour std::vector
+
+// GTKmm
 #include <gdkmm/device.h>
+#include <gdkmm/display.h>
+#include <gdkmm/event.h>
 #include <gdkmm/seat.h>
 #include <gdkmm/window.h>
+#include <gtkmm.h>
+
+// Project headers
+#include "InputBackend.hpp"
 
 // Forward declarations
 namespace cursor_manager {
     class CursorManager;
 }
 
-// Déclaration anticipée de MainWindow
+namespace input {
+
+// Forward declaration of MainWindow
 class MainWindow;
+
+// Déclaration forward pour InputBackend
+class InputBackend;
 
 class InputManager {
 public:
@@ -51,7 +65,7 @@ public:
      * @param window Pointeur vers la fenêtre principale
      * @param cursorManager Pointeur partagé vers le gestionnaire de curseur
      */
-    void setupGTKIntegration(MainWindow* window, std::shared_ptr<cursor_manager::CursorManager> cursorManager);
+    void setupGTKIntegration(Gtk::Window* window, std::shared_ptr<cursor_manager::CursorManager> cursorManager);
     
     /**
      * Enregistre un nouveau raccourci clavier
@@ -97,9 +111,14 @@ private:
     mutable std::mutex shortcutsMutex_;
     
     // Références aux autres composants
-    MainWindow* mainWindow_ = nullptr;
+    Gtk::Window* mainWindow_ = nullptr;
     std::shared_ptr<cursor_manager::CursorManager> cursorManager_;
+    
+    // Backend d'entrée (X11 ou Wayland)
+    InputBackend* backend_ = nullptr;
     
     // Constantes
     static constexpr const char* LOG_DOMAIN = "InputManager";
 };
+
+} // namespace input

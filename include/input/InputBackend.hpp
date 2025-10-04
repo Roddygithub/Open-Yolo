@@ -1,9 +1,12 @@
 #ifndef INPUT_BACKEND_HPP
 #define INPUT_BACKEND_HPP
 
-#include <gtkmm/window.h>
+// Standard C++
 #include <functional>
 #include <string>
+
+// GTKmm
+#include <gtkmm/window.h>
 #include <gdk/gdk.h>
 
 namespace input {

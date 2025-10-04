@@ -66,12 +66,12 @@ public:
 
     /**
      * @brief Obtient une valeur de configuration
-     * @tparam T Type de la valeur
      * @param section Section de configuration
      * @param key Clé de configuration
      * @param defaultValue Valeur par défaut si la clé n'existe pas
      * @return La valeur de configuration ou la valeur par défaut
      */
+    // Méthode générique pour obtenir une valeur de configuration
     template<typename T>
     T getValue(const std::string& section, const std::string& key, const T& defaultValue = T()) const {
         std::lock_guard<std::mutex> lock(m_mutex);
@@ -86,12 +86,29 @@ public:
         ss >> value;
         return value;
     }
+    
+    // Spécialisation pour std::string
+    std::string getValue(const std::string& section, const std::string& key, const char* defaultValue) const {
+        return getValue<std::string>(section, key, std::string(defaultValue));
+    }
+    
+    // Spécialisation pour bool
+    bool getValue(const std::string& section, const std::string& key, bool defaultValue) const {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        std::string fullKey = section + "." + key;
+        auto it = m_values.find(fullKey);
+        if (it == m_values.end()) {
+            return defaultValue;
+        }
+        
+        const std::string& value = it->second;
+        return (value == "true" || value == "1" || value == "yes" || value == "on");
+    }
 
     /**
      * @brief Vérifie si une clé de configuration existe
      * @param section Section de configuration
      * @param key Clé de configuration
-     * @return true si la clé existe, false sinon
      */
     bool hasKey(const std::string& section, const std::string& key) const {
         std::lock_guard<std::mutex> lock(m_mutex);
@@ -151,31 +168,9 @@ private:
     ConfigManager() = default;
     ~ConfigManager() = default;
 
-    std::unordered_map<std::string, std::string> m_values;
-    mutable std::mutex m_mutex;
-
-    // Spécialisation pour les chaînes de caractères
-    template<>
-    std::string getValue(const std::string& section, const std::string& key, const std::string& defaultValue) const {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        std::string fullKey = section + "." + key;
-        auto it = m_values.find(fullKey);
-        return (it != m_values.end()) ? it->second : defaultValue;
-    }
-
-    // Spécialisation pour les booléens
-    template<>
-    bool getValue(const std::string& section, const std::string& key, const bool& defaultValue) const {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        std::string fullKey = section + "." + key;
-        auto it = m_values.find(fullKey);
-        if (it == m_values.end()) {
-            return defaultValue;
-        }
-        
-        const std::string& value = it->second;
-        return (value == "true" || value == "1" || value == "yes" || value == "on");
-    }
+    // Membres statiques
+    static std::mutex m_mutex;
+    static std::map<std::string, std::string> m_values;
 };
 
 } // namespace openyolo

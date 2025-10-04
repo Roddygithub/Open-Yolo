@@ -27,6 +27,14 @@ install/
 *.iobj
 *.ipdb
 
+# Fichiers spécifiques au gestionnaire de curseurs
+resources/cursors/*.png
+!resources/cursors/README.md
+
+# Fichiers de configuration utilisateur
+*.yaml
+!resources/config/default-config.yaml
+
 # Fichiers de cache et temporaires
 .cache/
 *.swp

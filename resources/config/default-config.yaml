@@ -1,0 +1,79 @@
+# Configuration par défaut d'Open-Yolo
+
+# Paramètres généraux
+app:
+  name: "Open-Yolo"
+  version: "1.0.0"
+  language: "fr"
+  theme: "default"
+  check_for_updates: true
+  auto_start: false
+
+# Paramètres des curseurs
+cursor:
+  theme: "default"
+  size: 32
+  use_system: false
+  animations: true
+  shadow: true
+  shadow_color: "#00000080"
+  shadow_offset: 2
+
+# Profils de curseurs
+profiles:
+  default:
+    name: "Par défaut"
+    description: "Profil de curseur par défaut"
+    cursors:
+      default: "resources/cursors/pointer.png"
+      pointer: "resources/cursors/pointer.png"
+      hand: "resources/cursors/hand.png"
+      text: "resources/cursors/text.png"
+      crosshair: "resources/cursors/crosshair.png"
+      wait: "@watch"
+      help: "@question"
+      move: "@move"
+      not-allowed: "@cross"
+      progress: "@progress"
+
+  gaming:
+    name: "Jeu"
+    description: "Profil optimisé pour les jeux vidéo"
+    cursors:
+      default: "resources/cursors/crosshair.png"
+      pointer: "resources/cursors/crosshair.png"
+      hand: "resources/cursors/hand.png"
+      text: "@text"
+      crosshair: "resources/cursors/crosshair.png"
+
+# Paramètres de l'interface utilisateur
+ui:
+  width: 800
+  height: 600
+  maximized: false
+  show_toolbar: true
+  show_statusbar: true
+  show_preview: true
+  dark_mode: false
+  animation_speed: 1.0
+
+# Paramètres de débogage
+debug:
+  log_level: "info"  # debug, info, warning, error
+  log_to_file: true
+  log_file: "open-yolo.log"
+  enable_console: false
+  show_fps: false
+
+# Paramètres avancés
+advanced:
+  x11:
+    use_xfixes: true
+    xfixes_event_mask: 2
+    xfixes_cursor_notify: true
+  wayland:
+    enabled: false
+    preferred_backend: "libinput"
+  hot_reload: true
+  cache_size: 64
+  worker_threads: 2

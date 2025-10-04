@@ -1,10 +1,13 @@
 #ifndef DISPLAY_MANAGER_HPP
 #define DISPLAY_MANAGER_HPP
 
-#include <vector>
+// Standard C++
+#include <cstdint>
 #include <memory>
 #include <string>
-#include <cstdint>  // Pour les types de taille fixe
+#include <vector>
+
+namespace input {
 
 struct DisplayInfo {
     int32_t id;         // Identifiant unique de l'écran
@@ -160,5 +163,7 @@ private:
     struct Impl;
     std::unique_ptr<Impl> pImpl;
 };
+
+} // namespace input
 
 #endif // DISPLAY_MANAGER_HPP

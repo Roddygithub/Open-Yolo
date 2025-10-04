@@ -7,495 +7,245 @@ project(OpenYolo
     LANGUAGES CXX C
 )
 
-# Set default build type to Debug if not specified
+# Configuration des options
+option(BUILD_TESTS "Build the test suite" ON)
+option(BUILD_EXAMPLES "Build examples" OFF)
+option(ENABLE_LOGGING "Enable debug logging" ON)
+option(ENABLE_COVERAGE "Enable code coverage" OFF)
+option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
+option(ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)
+
+# Configuration du type de build
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build" FORCE)
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
-# Windows-specific settings
-if(WIN32)
-    # Enable multi-threaded compilation
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
-    
-    # Set output directories
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-    
-    # Set Windows SDK version (use latest available)
-    set(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION "10.0.19041.0" CACHE STRING "Windows SDK version to use")
-    
-    # Set Windows-specific compiler flags
-    add_compile_options(
-        /MP           # Multi-processor compilation
-        /W4           # Warning level 4
-        /WX-          # Don't treat warnings as errors
-        /EHsc         # C++ exceptions: SEH, Yes with Extern C functions
-        /permissive-  # Standards conformance mode for MSVC
-    )
-    
-    # Set Windows-specific linker flags
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /INCREMENTAL:NO")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /INCREMENTAL:NO")
-    
-    # Find Windows SDK
-    find_package(WindowsSDK REQUIRED)
-    
-    # Set Windows-specific definitions
-    add_definitions(-DWIN32_LEAN_AND_MEAN -DNOMINMAX)
-    
-    # Disable Unix-specific options
-    set(UNIX OFF)
-    set(ENABLE_LTO OFF)
-    set(ENABLE_COVERAGE OFF)
-    
-    message(STATUS "Windows build detected")
-else()
-    # Original Linux-specific settings
-    set(UNIX ON)
-    message(STATUS "Unix/Linux build detected")
-    
-    # Détection de CachyOS/Arch Linux
-    if (EXISTS "/etc/arch-release")
-        set(ARCH_LINUX TRUE)
-        message(STATUS "Arch Linux/CachyOS detected")
-        add_definitions(-DARCH_LINUX)
-    endif()
-endif()
-
-# Ajout du répertoire cmake au chemin de recherche des modules
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
-
-# Configuration C++
+# Configuration du standard C++
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# Options de construction
-option(ENABLE_LOGGING "Activer les logs de débogage" ON)
-option(ENABLE_WARNINGS_AS_ERRORS "Traiter les avertissements comme des erreurs" OFF)  # Disabled by default on Windows
-option(BUILD_TESTS "Construire les tests unitaires" OFF)
-option(ENABLE_COVERAGE "Activer la couverture de code" OFF)
-option(ENABLE_ASAN "Activer AddressSanitizer" OFF)
-option(ENABLE_UNITY_BUILD "Activer les builds Unity pour une compilation plus rapide" ON)
+# Configuration des répertoires de sortie
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# Compiler detection and settings
-if(MSVC)
-    # MSVC compiler settings
-    add_compile_options(
-        $<$<CONFIG:Debug>:/Od /Zi>  # Debug info and optimizations
-        $<$<CONFIG:Release>:/O2>    # Optimize for speed
-        /W4                        # Warning level 4
-        /WX-                       # Don't treat warnings as errors by default
-        /EHsc                      # C++ exceptions
-        /MP                        # Multi-processor compilation
-    )
-    
-    # Disable specific warnings that are too noisy
-    add_compile_options(
-        /wd4251  # class 'std::XXX' needs to have dll-interface
-        /wd4275  # non dll-interface class used as base for dll-interface class
-    )
-    
-    # Set Windows SDK version if not set
-    if(NOT CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION)
-        set(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION "10.0.19041.0")
-    endif()
-    
-    # Use Unicode character set
-    add_definitions(-DUNICODE -D_UNICODE)
-    
-    # Disable min/max macros that conflict with std::min/max
-    add_definitions(-DNOMINMAX)
-    
-    # Disable some deprecated warnings for external libraries
-    add_definitions(-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
-    
-    message(STATUS "Using MSVC compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    # GCC compiler settings
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "13.2.1")
-        message(WARNING "GCC version ${CMAKE_CXX_COMPILER_VERSION} is older than the recommended 13.2.1 for C++17 support")
-    endif()
-    
-    add_compile_options(
-        -Wall -Wextra -Wpedantic
-        -Wno-pedantic -Wno-conversion -Wno-sign-conversion -Wno-deprecated-declarations
-    )
-    
-    if(ENABLE_WARNINGS_AS_ERRORS)
-        add_compile_options(-Werror)
-    endif()
-    
-    message(STATUS "Using GCC compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
-    
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    # Clang compiler settings
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "16.0.0")
-        message(WARNING "Clang version ${CMAKE_CXX_COMPILER_VERSION} is older than the recommended 16.0.0 for full C++17 support")
-    endif()
-    
-    add_compile_options(
-        -Wall -Wextra -Wpedantic
-        -Wno-pedantic -Wno-conversion -Wno-sign-conversion -Wno-deprecated-declarations
-    )
-    
-    if(ENABLE_WARNINGS_AS_ERRORS)
-        add_compile_options(-Werror)
-    endif()
-    
-    message(STATUS "Using Clang compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
-else()
-    message(WARNING "Unsupported compiler: ${CMAKE_CXX_COMPILER_ID}")
-endif()
-
-# Link Time Optimization (LTO)
-if(ENABLE_LTO AND NOT WIN32)  # Disable LTO on Windows by default as it can cause issues
-    include(CheckIPOSupported)
-    check_ipo_supported(RESULT LTO_SUPPORTED OUTPUT output)
-    if(LTO_SUPPORTED)
-        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-        message(STATUS "LTO activated")
-    else()
-        message(STATUS "LTO not supported: ${output}")
-    endif()
-endif()
-
-# Configuration des avertissements
-if(MSVC)
-    add_compile_options(/W4 /WX)
-    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-else()
-    add_compile_options(
-        -Wall 
-        -Wextra 
-        -Wno-pedantic 
-        -Wno-conversion 
-        -Wno-sign-conversion
-        -Wno-deprecated-declarations
-    )
-    # Désactiver temporairement les avertissements traités comme des erreurs
-    # if(ENABLE_WARNINGS_AS_ERRORS)
-    #     add_compile_options(-Werror)
-    # endif()
-    
-    # Optimisation LTO (Link Time Optimization)
-    if(ENABLE_LTO)
-        include(CheckIPOSupported)
-        check_ipo_supported(RESULT LTO_SUPPORTED OUTPUT output)
-        if(LTO_SUPPORTED)
-            set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-            message(STATUS "LTO activé")
-        else()
-            message(STATUS "LTO non supporté: ${output}")
-        endif()
-    endif()
-endif()
-
-if(ENABLE_UNITY_BUILD)
-    set(CMAKE_UNITY_BUILD ON)
-    message(STATUS "Builds Unity activés")
-endif()
-
-# Désactiver les avertissements de dépréciation pour GTKmm
-add_definitions(-DGTKMM_DISABLE_DEPRECATED)
-add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-declarations>)
-
-# Configuration des bibliothèques requises
+# Détection du système d'exploitation
 if(WIN32)
-    # Windows-specific package finding
+    add_definitions(-DWIN32_LEAN_AND_MEAN -DNOMINMAX)
+    set(UNIX OFF)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    
+    # Options de compilation pour Windows
+    add_compile_options(
+        /W4
+        /WX-
+        /EHsc
+        /MP
+        /permissive-
+    )
+    
+    # Options d'édition des liens pour Windows
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /INCREMENTAL:NO")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /INCREMENTAL:NO")
+    
+    # Détection des dépendances Windows
     find_package(OpenGL REQUIRED)
     
-    # Set paths to your GTK and SDL2 installations
-    set(GTK3_PATH "C:/gtkmm64" CACHE PATH "Path to GTK3 installation")
-    set(SDL2_PATH "C:/SDL2" CACHE PATH "Path to SDL2 installation")
+    # Configuration des chemins pour les bibliothèques Windows
+    # (À adapter selon votre configuration)
     
-    # Add include and library paths
-    include_directories(
-        ${GTK3_PATH}/include
-        ${GTK3_PATH}/include/gtkmm-3.0
-        ${GTK3_PATH}/lib/gtkmm-3.0/include
-        ${GTK3_PATH}/include/atkmm-1.6
-        ${GTK3_PATH}/include/gdkmm-3.0
-        ${GTK3_PATH}/lib/gdkmm-3.0/include
-        ${GTK3_PATH}/include/giomm-2.4
-        ${GTK3_PATH}/lib/giomm-2.4/include
-        ${GTK3_PATH}/include/glib-2.0
-        ${GTK3_PATH}/lib/glib-2.0/include
-        ${GTK3_PATH}/include/glibmm-2.4
-        ${GTK3_PATH}/lib/glibmm-2.4/include
-        ${GTK3_PATH}/include/gtk-3.0
-        ${GTK3_PATH}/include/cairo
-        ${GTK3_PATH}/include/cairomm-1.0
-        ${GTK3_PATH}/lib/cairomm-1.0/include
-        ${GTK3_PATH}/include/pangomm-1.4
-        ${GTK3_PATH}/lib/pangomm-1.4/include
-        ${GTK3_PATH}/include/atk-1.0
-        ${GTK3_PATH}/include/gdk-pixbuf-2.0
-        ${GTK3_PATH}/include/pango-1.0
-        ${GTK3_PATH}/include/harfbuzz
-        ${GTK3_PATH}/include/fribidi
-        ${GTK3_PATH}/include/freetype2
-        ${GTK3_PATH}/include/libpng16
-        ${GTK3_PATH}/include/pixman-1
-        ${GTK3_PATH}/include/sigc++-2.0
-        ${GTK3_PATH}/lib/sigc++-2.0/include
-        
-        # SDL2 includes
-        ${SDL2_PATH}/include
-        ${SDL2_PATH}/include/SDL2
-    )
-    
-    # Link directories
-    link_directories(
-        ${GTK3_PATH}/lib
-        ${SDL2_PATH}/lib/x64
-    )
-    
-    # Find libraries
-    find_library(GTKMM3_LIBRARY NAMES gtkmm-3.0 PATHS ${GTK3_PATH}/lib)
-    find_library(GIOMM2_4_LIBRARY NAMES giomm-2.4 PATHS ${GTK3_PATH}/lib)
-    find_library(GLIBMM2_4_LIBRARY NAMES glibmm-2.4 PATHS ${GTK3_PATH}/lib)
-    find_library(CAIROMM1_0_LIBRARY NAMES cairomm-1.0 PATHS ${GTK3_PATH}/lib)
-    find_library(SIGC2_LIBRARY NAMES sigc-2.0 PATHS ${GTK3_PATH}/lib)
-    find_library(SDL2_LIBRARY NAMES SDL2 PATHS ${SDL2_PATH}/lib/x64)
-    find_library(SDL2_IMAGE_LIBRARY NAMES SDL2_image PATHS ${SDL2_PATH}/lib/x64)
-    
-    # Set variables for later use
-    set(GTKMM3_LIBRARIES ${GTKMM3_LIBRARY} ${GIOMM2_4_LIBRARY} ${GLIBMM2_4_LIBRARY} 
-                         ${CAIROMM1_0_LIBRARY} ${SIGC2_LIBRARY} ${OPENGL_gl_LIBRARY})
-    set(SDL2_LIBRARIES ${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY} ${OPENGL_gl_LIBRARY})
-    
-    # Add Windows-specific libraries
-    set(WINDOWS_LIBS
-        gdi32
-        shell32
-        ole32
-        oleaut32
-        uuid
-        comdlg32
-        advapi32
-        winmm
-        imm32
-        setupapi
-        version
-        dinput8
-        dxguid
-        d3d11
-        d3dcompiler
-    )
-    
-    # Combine all libraries
-    set(ALL_LIBS ${GTKMM3_LIBRARIES} ${SDL2_LIBRARIES} ${WINDOWS_LIBS})
-    
-    # Add resource files if any
-    if(EXISTS "${CMAKE_SOURCE_DIR}/resources/OpenYolo.rc")
-        add_custom_command(
-            OUTPUT ${CMAKE_BINARY_DIR}/OpenYolo.res
-            COMMAND windres.exe -i ${CMAKE_SOURCE_DIR}/resources/OpenYolo.rc -o ${CMAKE_BINARY_DIR}/OpenYolo.res
-            DEPENDS ${CMAKE_SOURCE_DIR}/resources/OpenYolo.rc
-        )
-        set(ALL_RESOURCES ${CMAKE_BINARY_DIR}/OpenYolo.res)
-    endif()
-    message(STATUS "Using Windows-specific library paths")
 else()
-    # Linux/Unix package finding using pkg-config
+    # Configuration pour Linux/Unix
+    set(UNIX ON)
+    
+    # Options de compilation pour Linux/Unix
+    add_compile_options(
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Werror=return-type
+        -fPIC
+    )
+    
+    # Détection des dépendances avec pkg-config
     find_package(PkgConfig REQUIRED)
     
-    # Détection des dépendances de base
-    find_package(PkgConfig REQUIRED)
+    # Détection de X11
+    if(UNIX AND NOT APPLE)
+        find_package(X11 REQUIRED)
+        if(X11_FOUND)
+            message(STATUS "X11 support enabled")
+            include_directories(${X11_INCLUDE_DIR})
+            add_definitions(-DX11_ENABLED)
+        endif()
+    endif()
     
-    # SDL2 et SDL2_image via pkg-config
-    pkg_check_modules(SDL2 REQUIRED sdl2)
-    pkg_check_modules(SDL2_IMAGE REQUIRED sdl2_image)
+    # Détection des dépendances SDL2
+    find_package(SDL2 REQUIRED)
+    find_package(SDL2_image REQUIRED)
     
-    # Détection de GTKmm et dépendances
-    find_package(PkgConfig REQUIRED)
+    # Configuration des chemins pour SDL2
+    if(NOT TARGET SDL2::SDL2)
+        add_library(SDL2::SDL2 INTERFACE IMPORTED)
+        set_target_properties(SDL2::SDL2 PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${SDL2_INCLUDE_DIRS}"
+            INTERFACE_LINK_LIBRARIES "${SDL2_LIBRARIES}"
+        )
+    endif()
+    
+    # Configuration des chemins pour SDL2_image
+    if(NOT TARGET SDL2_image::SDL2_image)
+        add_library(SDL2_image::SDL2_image INTERFACE IMPORTED)
+        set_target_properties(SDL2_image::SDL2_image PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${SDL2_IMAGE_INCLUDE_DIRS}"
+            INTERFACE_LINK_LIBRARIES "${SDL2_IMAGE_LIBRARIES}"
+        )
+    endif()
+    
+    # Détection des dépendances GTK
     pkg_check_modules(GTKMM3 REQUIRED gtkmm-3.0)
     pkg_check_modules(GIOMM2_4 REQUIRED giomm-2.4)
     pkg_check_modules(GLIBMM2_4 REQUIRED glibmm-2.4)
     pkg_check_modules(CAIROMM1_0 REQUIRED cairomm-1.0)
     pkg_check_modules(SIGC2 REQUIRED sigc++-2.0)
     
-    # Détection d'OpenGL
+    # Détection d'autres dépendances
     find_package(OpenGL REQUIRED)
-    
-    # Détection de GLEW
     find_package(GLEW REQUIRED)
+    find_package(CURL REQUIRED)
     
-    # Configuration des chemins d'inclusion
-    include_directories(
-        ${SDL2_INCLUDE_DIRS}
-        ${SDL2_IMAGE_INCLUDE_DIRS}
-        ${GTKMM3_INCLUDE_DIRS}
-        ${GIOMM2_4_INCLUDE_DIRS}
-        ${GLIBMM2_4_INCLUDE_DIRS}
-        ${CAIROMM1_0_INCLUDE_DIRS}
-        ${SIGC2_INCLUDE_DIRS}
-        ${OPENGL_INCLUDE_DIR}
-        ${GLEW_INCLUDE_DIRS}
-    )
+    # Configuration pour Wayland (optionnel)
+    pkg_check_modules(WAYLAND_CLIENT wayland-client)
+    pkg_check_modules(XKBCOMMON xkbcommon)
+    if(WAYLAND_CLIENT_FOUND AND XKBCOMMON_FOUND)
+        add_definitions(-DWAYLAND_ENABLED)
+    endif()
     
-    # Configuration des bibliothèques
-    set(ALL_LIBS 
-        ${GTKMM3_LIBRARIES}
-        ${GIOMM2_4_LIBRARIES}
-        ${GLIBMM2_4_LIBRARIES}
-        ${CAIROMM1_0_LIBRARIES}
-        ${SIGC2_LIBRARIES}
-        ${SDL2_LIBRARIES}
-        ${SDL2_IMAGE_LIBRARIES}
-        ${OPENGL_LIBRARIES}
-        ${GLEW_LIBRARIES}
-    )
+    # Configuration pour la couverture de code
+    if(ENABLE_COVERAGE)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage -fprofile-arcs -ftest-coverage")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --coverage")
+    endif()
     
-    # Configuration spécifique à X11/Wayland
-    if(UNIX AND NOT APPLE)
-        # Détection de X11
-        find_package(X11)
-        if(X11_FOUND)
-            message(STATUS "X11 support enabled")
-            include_directories(${X11_INCLUDE_DIR})
-            set(ALL_LIBS ${ALL_LIBS} ${X11_LIBRARIES} X11 Xrandr Xcursor Xinerama Xi)
-            add_definitions(-DX11_ENABLED)
-        else()
-            message(WARNING "X11 not found, X11 support will be disabled")
-        endif()
-
-        # Détection de Wayland
-        pkg_check_modules(WAYLAND_CLIENT wayland-client)
-        pkg_check_modules(WAYLAND_EGL wayland-egl)
-        pkg_check_modules(WAYLAND_CURSOR wayland-cursor)
-        pkg_check_modules(XKBCOMMON xkbcommon)
-        
-        if(WAYLAND_CLIENT_FOUND AND WAYLAND_EGL_FOUND AND WAYLAND_CURSOR_FOUND AND XKBCOMMON_FOUND)
-            message(STATUS "Wayland support enabled")
-            add_definitions(-DWAYLAND_ENABLED)
-            
-            # Vérification de wayland-protocols
-            find_program(WAYLAND_SCANNER_EXECUTABLE NAMES wayland-scanner)
-            if(NOT WAYLAND_SCANNER_EXECUTABLE)
-                message(WARNING "wayland-scanner not found, Wayland protocols will not be generated")
-            else()
-                # Add Wayland protocols
-                find_package(PkgConfig REQUIRED)
-                pkg_check_modules(WAYLAND_PROTOCOLS wayland-protocols)
-                
-                if(WAYLAND_PROTOCOLS_FOUND)
-                    pkg_get_variable(WAYLAND_PROTOCOLS_DIR wayland-protocols pkgdatadir)
-                    message(STATUS "Found wayland-protocols in ${WAYLAND_PROTOCOLS_DIR}")
-                    
-                    # Add Wayland protocol files
-                    set(WAYLAND_PROTOCOL_FILES
-                        "${WAYLAND_PROTOCOLS_DIR}/stable/xdg-shell/xdg-shell.xml"
-                        "${WAYLAND_PROTOCOLS_DIR}/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml"
-                        "${WAYLAND_PROTOCOLS_DIR}/stable/viewporter/viewporter.xml"
-                    )
-                endif()
-            endif()
-            
-            # Add Wayland libraries
-            set(ALL_LIBS ${ALL_LIBS}
-                ${WAYLAND_CLIENT_LIBRARIES}
-                ${WAYLAND_EGL_LIBRARIES}
-                ${WAYLAND_CURSOR_LIBRARIES}
-                ${XKBCOMMON_LIBRARIES}
-            )
-            
-            # Add include directories
-            include_directories(
-                ${WAYLAND_CLIENT_INCLUDE_DIRS}
-                ${WAYLAND_EGL_INCLUDE_DIRS}
-                ${WAYLAND_CURSOR_INCLUDE_DIRS}
-                ${XKBCOMMON_INCLUDE_DIRS}
-            )
-        endif()  # End of Wayland check
-        
-            # Generate Wayland protocols if scanner is available
-            if(WAYLAND_SCANNER_EXECUTABLE AND WAYLAND_PROTOCOLS_FOUND)
-                foreach(proto ${WAYLAND_PROTOCOL_FILES})
-                    if(EXISTS ${proto})
-                        get_filename_component(proto_name ${proto} NAME_WE)
-                        string(REPLACE "-" "_" proto_target ${proto_name})
-                        
-                        set(proto_client_header "${CMAKE_CURRENT_BINARY_DIR}/wayland/${proto_target}-client-protocol.h")
-                        set(proto_src "${CMAKE_CURRENT_BINARY_DIR}/wayland/${proto_target}-protocol.c")
-                        
-                        add_custom_command(
-                            OUTPUT "${proto_client_header}" "${proto_src}"
-                            COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/wayland"
-                            COMMAND wayland-scanner client-header < ${proto} > ${proto_client_header}
-                            COMMAND wayland-scanner private-code < ${proto} > ${proto_src}
-                            DEPENDS ${proto}
-                            COMMENT "Generating ${proto_name} protocol"
-                        )
-                        
-                        list(APPEND WAYLAND_GENERATED_SOURCES ${proto_src})
-                        list(APPEND WAYLAND_GENERATED_HEADERS ${proto_client_header})
-                        include_directories(${CMAKE_CURRENT_BINARY_DIR}/wayland)
-                    endif()
-                endforeach()
-            endif()
-        endif()  # End of UNIX AND NOT APPLE
-    else()
-        message(STATUS "Skipping X11/Wayland on non-Linux/Apple system")
-    endif()  # End of UNIX check
+    # Configuration des sanitizers
+    if(ENABLE_ASAN)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+    endif()
     
-    message(STATUS "Using Unix/Linux pkg-config for libraries")
-endif()  # End of WIN32 else
-
-# Common dependencies
-find_package(OpenGL REQUIRED)
-find_package(GLEW REQUIRED)
-
-# X11 (only required on Linux/Unix)
-if(UNIX AND NOT APPLE)
-    find_package(X11 REQUIRED)
+    if(ENABLE_UBSAN)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined -fno-sanitize-recover=all")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=undefined")
+    endif()
 endif()
 
-# Ajout du sous-répertoire src
-add_subdirectory(src)
+# Configuration des définitions de compilation
+if(ENABLE_LOGGING)
+    add_definitions(-DENABLE_LOGGING)
+endif()
 
-# Ajout des tests si activés
+# Configuration des répertoires d'inclusion
+include_directories(
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_BINARY_DIR}
+    ${SDL2_INCLUDE_DIRS}
+    ${SDL2_IMAGE_INCLUDE_DIRS}
+    ${GTKMM3_INCLUDE_DIRS}
+    ${GIOMM2_4_INCLUDE_DIRS}
+    ${GLEW_INCLUDE_DIRS}
+    ${CURL_INCLUDE_DIRS}
+    ${X11_INCLUDE_DIR}
+)
+
+# Configuration du fichier config.h
+configure_file(
+    ${CMAKE_SOURCE_DIR}/include/config.h.in
+    ${CMAKE_BINARY_DIR}/config.h
+    @ONLY
+)
+
+# Ajout des sous-répertoires
+add_subdirectory(src/log)
+add_subdirectory(src/config)
+add_subdirectory(src/input)
+add_subdirectory(src/cursormanager)
+add_subdirectory(src/displaymanager)
+add_subdirectory(src/gui)
+add_subdirectory(src/ui)
+
+# Construction de l'exécutable principal
+add_executable(open-yolo
+    src/main.cpp
+)
+
+# Liaison des bibliothèques
+target_link_libraries(open-yolo
+    PRIVATE
+        log
+        config
+        input
+        displaymanager
+        gui
+        ${GTKMM3_LIBRARIES}
+        SDL2::SDL2
+        SDL2_image::SDL2_image
+        ${WAYLAND_CLIENT_LIBRARIES}
+        ${XKBCOMMON_LIBRARIES}
+        ${GIO_UNIX_LIBRARIES}
+        ${GLEW_LIBRARIES}
+        ${CURL_LIBRARIES}
+        ${X11_LIBRARIES}
+        X11 Xrandr Xcursor Xinerama Xi
+)
+
+# Installation des fichiers
+install(TARGETS open-yolo
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+)
+
+# Installation des ressources
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/resources/
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/open-yolo
+)
+
+# Construction des exemples
+if(BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()
+
+# Construction des tests
 if(BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
+    
+    # Ajout d'une cible pour exécuter les tests
+    add_custom_target(run-tests
+        COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        DEPENDS ${PROJECT_NAME}-tests
+    )
+    
+    # Configuration de CPack pour les packages
+    include(InstallRequiredSystemLibraries)
+    set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
+    set(CPACK_PACKAGE_VERSION_MAJOR "1")
+    set(CPACK_PACKAGE_VERSION_MINOR "1")
+    set(CPACK_PACKAGE_VERSION_PATCH "0")
+    set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_SOURCE_DIR}/README.md")
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Gestionnaire de curseurs personnalisés")
+    include(CPack)
 endif()
 
-# Configuration des chemins d'installation
-include(GNUInstallDirs)
-set(CMAKE_INSTALL_LIBDIR ${CMAKE_INSTALL_LIBDIR})
-set(CMAKE_INSTALL_BINDIR ${CMAKE_INSTALL_BINDIR})
-set(CMAKE_INSTALL_INCLUDEDIR ${CMAKE_INSTALL_INCLUDEDIR})
-
-# Configuration CPack pour la génération de paquets
-set(CPACK_PACKAGE_NAME "open-yolo")
-set(CPACK_PACKAGE_VENDOR "Open-Yolo Project")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Gestionnaire de curseurs personnalisés pour Linux")
-set(CPACK_PACKAGE_VERSION_MAJOR "1")
-set(CPACK_PACKAGE_VERSION_MINOR "0")
-set(CPACK_PACKAGE_VERSION_PATCH "0")
-set(CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
-set(CPACK_PACKAGE_CONTACT "your.email@example.com")
-set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/Roddygithub/Open-Yolo")
-
-# Configuration DEB
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Your Name <your.email@example.com>")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libgtkmm-3.0-1v5, libsdl2-2.0-0, libsdl2-image-2.0-0, libglew2.2, libgif7, libx11-6, libxrandr2, libxcursor1, libxinerama1, libxi6, libgl1")
-set(CPACK_DEBIAN_PACKAGE_SECTION "x11")
-set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
-set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
-
-# Configuration RPM
-set(CPACK_RPM_PACKAGE_LICENSE "MIT")
-set(CPACK_RPM_PACKAGE_GROUP "User Interface/X")
-set(CPACK_RPM_PACKAGE_REQUIRES "gtkmm30, SDL2, SDL2_image, glew, giflib, libX11, libXrandr, libXcursor, libXinerama, libXi, mesa-libGL")
-set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
-
-# Générateurs de paquets
-set(CPACK_GENERATOR "TGZ;DEB;RPM")
-
-include(CPack)
+# Message de fin de configuration
+message(STATUS "Configuration de OpenYolo terminée")
+message(STATUS "  Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "  Install prefix: ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "  Build tests: ${BUILD_TESTS}")
+message(STATUS "  Build examples: ${BUILD_EXAMPLES}")
+message(STATUS "  Enable logging: ${ENABLE_LOGGING}")
+message(STATUS "  Enable coverage: ${ENABLE_COVERAGE}")

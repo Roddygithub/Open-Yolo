@@ -14,8 +14,11 @@ add_subdirectory(gui)
 # 2. Création de l'exécutable principal
 # =============================================================================
 
-# Création de l'exécutable
-add_executable(OpenYolo main.cpp)
+# Création de l'exécutable avec la version simplifiée
+add_executable(OpenYolo 
+    main_simple.cpp
+    main_globals.cpp
+)
 
 # Liaison des bibliothèques d'objets à l'exécutable
 target_link_libraries(OpenYolo PRIVATE

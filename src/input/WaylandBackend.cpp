@@ -1,10 +1,21 @@
-#include "../../include/input/WaylandBackend.hpp"
+#include "../../include/input/backends/WaylandBackend.hpp"
 #include <iostream>
 #include <algorithm>
 #include <iomanip>
 #include <sstream>
 #include <map>
 #include <set>
+#include <stdexcept>
+
+// Spécialisation de std::hash pour Glib::ustring
+namespace std {
+    template<>
+    struct hash<Glib::ustring> {
+        size_t operator()(const Glib::ustring& s) const {
+            return std::hash<std::string>{}(s.raw());
+        }
+    };
+}
 
 // Includes spécifiques à Wayland via GDK
 #include <gdk/gdkwayland.h>
@@ -17,6 +28,17 @@ namespace input {
 // ... (Namespace with constants and logging helpers)
 
 // --- Implementation ---
+
+namespace {
+    // Fonction utilitaire pour gérer les erreurs
+    void handleError(const std::string& message, const std::exception* e = nullptr) {
+        std::cerr << "Erreur: " << message;
+        if (e) {
+            std::cerr << " Détails: " << e->what();
+        }
+        std::cerr << std::endl;
+    }
+}
 
 WaylandBackend::WaylandBackend()
     : m_window(nullptr),
@@ -252,8 +274,6 @@ bool WaylandBackend::unregisterShortcut(const std::string& name) {
     }
 }
 
-// ... (Le reste des fonctions reste globalement inchangé mais pourrait bénéficier de l'utilisation de handleError)
-
 std::string WaylandBackend::convertToPortalShortcut(const std::string& gtkAccel) {
     // Convert GTK accelerator (e.g., "<Control>q") to portal format (e.g., "<Control>q")
     // This is a basic implementation and might need adjustments
@@ -278,22 +298,15 @@ std::string WaylandBackend::convertToPortalShortcut(const std::string& gtkAccel)
     return result;
 }
 
-#pragma region "Unchanged Methods"
-
 void WaylandBackend::setWindow(Gtk::Window* window) { m_window = window; }
-
 bool WaylandBackend::onKeyPressed(GdkEventKey* event) { return false; }
-
 void WaylandBackend::setMinLogLevel(LogLevel level) { m_minLogLevel = level; }
-
 void WaylandBackend::addStateChangeCallback(StateChangeCallback&& callback) { m_stateChangeCallbacks.push_back(std::move(callback)); }
-
 void WaylandBackend::addErrorCallback(ErrorCallback&& callback) { m_errorCallbacks.push_back(std::move(callback)); }
 
 void WaylandBackend::setSessionState(SessionState newState) {
     static const std::map<SessionState, std::set<SessionState>> validTransitions = {
         {SessionState::Disconnected, {SessionState::Connecting}},
-        {SessionState::Connecting,   {SessionState::Connected, SessionState::Reconnecting, SessionState::Disconnected}},
         {SessionState::Connected,    {SessionState::Disconnected}},
         {SessionState::Reconnecting, {SessionState::Connecting, SessionState::Disconnected}}
     };

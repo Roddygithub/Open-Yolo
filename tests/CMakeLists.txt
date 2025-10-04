@@ -8,11 +8,12 @@ if(BUILD_TESTS)
 
     # Définir les sources de test
     set(TEST_SOURCES
+        TestCursorManager.cpp
         test_cursormanager.cpp
+        test_cursor.cpp
         test_gui.cpp
-        test_input.cpp
-        test_displaymanager.cpp
         test_wayland_backend.cpp
+        test_theme_manager.cpp
     )
 
     # Créer l'exécutable de test
@@ -38,6 +39,13 @@ if(BUILD_TESTS)
     )
 
     # Lier les dépendances
+    target_link_libraries(${PROJECT_NAME}-tests PRIVATE
+        inputmanager
+        ${GTEST_LIBRARIES}
+        ${GTEST_MAIN_LIBRARIES}
+        pthread
+    )
+    
     # Ajout des dépendances pour Wayland si disponible
     if(WAYLAND_CLIENT_FOUND AND WAYLAND_EGL_FOUND AND WAYLAND_CURSOR_FOUND AND XKBCOMMON_FOUND)
         target_include_directories(${PROJECT_NAME}-tests

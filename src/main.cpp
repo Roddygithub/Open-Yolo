@@ -15,27 +15,62 @@
 #include <csignal>
 #include <filesystem>
 #include <cstdlib>
+#include <stdexcept>
 
-// Inclure nos en-têtes
-#include "../include/config/ConfigManager.hpp"
-#include "../include/log/Logger.hpp"
-#include "../include/cursormanager/CursorManager.hpp"
-#include "../include/cursormanager/ShaderProgram.hpp"
-#include "../include/gui/MainWindow.hpp"
-#include "../include/input/InputManager.hpp"
-#include "../include/displaymanager/DisplayManager.hpp"
+#include "config/ConfigManager.hpp"
+#include "log/Logger.hpp"
+#include "cursormanager/CursorManager.hpp"
+#include "cursormanager/ShaderProgram.hpp"
+#include "gui/MainWindow.hpp"
+#include "input/InputManager.hpp"
+#include "displaymanager/DisplayManager.hpp"
+#include "input/InputBackend.hpp"
+#include "input/backends/X11Backend.hpp"
+#include "input/backends/WaylandBackend.hpp"
+#include "input/ShortcutManager.hpp"
+
+// Déclaration anticipée des classes
+extern openyolo::config::ConfigManager g_config;
+extern std::shared_ptr<openyolo::log::Logger> g_logger;
 
 // Alias pour faciliter l'accès
-namespace cfg = openyolo::config;
-namespace log = openyolo::log;
-namespace cm = cursor_manager;
+namespace openyolo {
+    namespace input {
+        class DisplayManager;
+        class InputManager;
+    }
+    namespace gui {
+        class MainWindow;
+    }
+}
+
+using ConfigManager = openyolo::config::ConfigManager;
+using Logger = openyolo::log::Logger;
+using LogLevel = openyolo::log::LogLevel;
+
+// Définition des macros de journalisation simplifiées
+#define LOG_ERROR(msg)   std::cerr << "[ERROR] " << msg << std::endl
+#define LOG_WARNING(msg) std::cout << "[WARNING] " << msg << std::endl
+#define LOG_INFO(msg)    std::cout << "[INFO] " << msg << std::endl
+#define LOG_DEBUG(msg)   std::cout << "[DEBUG] " << msg << std::endl
+#define LOG_TRACE(msg)   std::cout << "[TRACE] " << msg << std::endl
+
 
 // Global flag for clean shutdown
 std::atomic<bool> g_running{true};
 
-// Configuration et logger globaux
-std::shared_ptr<cfg::ConfigManager> g_config;
-std::shared_ptr<log::Logger> g_logger;
+// Déclaration des variables globales (définies dans main_globals.cpp)
+extern openyolo::config::ConfigManager g_config;
+extern std::shared_ptr<openyolo::log::Logger> g_logger;
+
+// Fonction utilitaire pour gérer les erreurs
+void handleError(const std::string& message, const std::exception* e = nullptr) {
+    std::cerr << "Erreur: " << message;
+    if (e) {
+        std::cerr << " Détails: " << e->what();
+    }
+    std::cerr << std::endl;
+}
 
 // Signal handler for clean shutdown
 void signalHandler(int signum) {
@@ -47,36 +82,33 @@ void signalHandler(int signum) {
 void initializeConfig() {
     try {
         // Obtenir le chemin de configuration
-        auto configPath = cfg::ConfigManager::getDefaultConfigPath();
-        
-        // Créer le gestionnaire de configuration
-        g_config = std::make_shared<cfg::ConfigManager>();
+        auto configPath = openyolo::config::ConfigManager::getDefaultConfigPath();
         
         // Charger la configuration si le fichier existe
         if (std::filesystem::exists(configPath)) {
-            g_config->load(configPath);
+            g_config.load(configPath);
             LOG_INFO("Configuration chargée depuis " + configPath.string());
         } else {
             // Créer une configuration par défaut
             LOG_INFO("Aucune configuration trouvée, utilisation des valeurs par défaut");
             
             // Définir les valeurs par défaut
-            g_config->setValue("Application", "name", "Open-Yolo");
-            g_config->setValue("Application", "version", "1.0.0");
-            g_config->setValue("Application", "debug", false);
-            g_config->setValue("Application", "log_level", 1);
+            g_config.setValue("Application", "name", "Open-Yolo");
+            g_config.setValue("Application", "version", "1.0.0");
+            g_config.setValue("Application", "debug", false);
+            g_config.setValue("Application", "log_level", 1);
             
             // Valeurs par défaut pour la fenêtre
-            g_config->setValue("Window", "fullscreen", false);
-            g_config->setValue("Window", "width", 1024);
-            g_config->setValue("Window", "height", 768);
+            g_config.setValue("Window", "fullscreen", false);
+            g_config.setValue("Window", "width", 1024);
+            g_config.setValue("Window", "height", 768);
             
             // Valeurs par défaut pour le curseur
-            g_config->setValue("Cursor", "enabled", true);
-            g_config->setValue("Cursor", "size", 1.0f);
+            g_config.setValue("Cursor", "enabled", true);
+            g_config.setValue("Cursor", "size", 1.0f);
             
             // Sauvegarder la configuration par défaut
-            g_config->save(configPath);
+            g_config.save(configPath);
             LOG_INFO("Configuration par défaut enregistrée dans " + configPath.string());
         }
     } catch (const std::exception& e) {
@@ -89,68 +121,43 @@ void initializeConfig() {
 void initializeLogger() {
     try {
         // Obtenir le niveau de log depuis la configuration
-        int logLevel = g_config->getValue("Application", "log_level", 1);
-        bool debugMode = g_config->getValue("Application", "debug", false);
+        int logLevel = g_config.getValue("Application", "log_level", 1);
+        bool debugMode = g_config.getValue("Application", "debug", false);
         
         // Déterminer le niveau de log minimum
-        log::LogLevel minLevel = log::LogLevel::INFO;
+        LogLevel minLevel = LogLevel::INFO;
         if (debugMode) {
-            minLevel = log::LogLevel::DEBUG;
-        } else {
-            switch (logLevel) {
-                case 0: minLevel = log::LogLevel::ERROR; break;
-                case 1: minLevel = log::LogLevel::WARNING; break;
-                case 2: minLevel = log::LogLevel::INFO; break;
-                case 3: minLevel = log::LogLevel::DEBUG; break;
-                case 4: minLevel = log::LogLevel::TRACE; break;
-                default: minLevel = log::LogLevel::INFO;
-            }
+            minLevel = LogLevel::DEBUG;
+        }
+        // Configurer le niveau de log
+        switch (logLevel) {
+            case 0: minLevel = LogLevel::ERROR; break;
+            case 1: minLevel = LogLevel::WARNING; break;
+            case 2: minLevel = LogLevel::INFO; break;
+            case 3: minLevel = LogLevel::DEBUG; break;
+            case 4: minLevel = LogLevel::TRACE; break;
+            default: minLevel = LogLevel::INFO;
         }
         
         // Obtenir le répertoire de logs depuis la configuration ou utiliser la valeur par défaut
-        std::string logDir = g_config->getValue("Paths", "log_dir", "");
-        if (logDir.empty()) {
-            // Utiliser le répertoire par défaut
-            logDir = (std::filesystem::path(g_config->getValue("Paths", "config_dir", "")) / "logs").string();
-        }
-        
-        // Initialiser le logger
-        log::Logger::instance().initialize(
-            logDir,                            // Répertoire des logs
-            5 * 1024 * 1024,                  // 5 Mo par fichier
-            10,                               // 10 fichiers maximum
-            minLevel,                         // Niveau de log minimum
-            true                              // Afficher dans la console
-        );
-        
-        LOG_INFO("Système de journalisation initialisé (niveau: " + std::to_string(static_cast<int>(minLevel)) + ")");
-    } catch (const std::exception& e) {
-        std::cerr << "Erreur lors de l'initialisation du système de journalisation: " << e.what() << std::endl;
-        throw;
-    }
-}
-
-// Nettoie les ressources à la fermeture de l'application
 void cleanup() {
     LOG_INFO("Nettoyage des ressources...");
     
-    // Sauvegarder la configuration si nécessaire
-    if (g_config) {
-        try {
-            g_config->save(cfg::ConfigManager::getDefaultConfigPath());
-            LOG_INFO("Configuration sauvegardée");
-        } catch (const std::exception& e) {
-            LOG_ERROR("Erreur lors de la sauvegarde de la configuration: " + std::string(e.what()));
-        }
+    // Sauvegarder la configuration
+    try {
+g_config.save(ConfigManager::getDefaultConfigPath());
+    } catch (const std::exception& e) {
+        LOG_ERROR("Erreur lors de la sauvegarde de la configuration: " + std::string(e.what()));
     }
     
     // Fermer le logger
-    log::Logger::instance().shutdown();
+    openyolo::log::Logger::instance().shutdown();
     
     LOG_INFO("Application arrêtée");
 }
 
 // Initialize GTK environment
+{{ ... }}
 void initializeGtkEnvironment() {
     // Set GTK environment variables
     g_setenv("GTK_THEME", "Adwaita", TRUE);
@@ -193,8 +200,8 @@ void initializeGtkEnvironment() {
 }
 
 // Fonction pour la boucle de rendu dans un thread séparé
-void renderLoop(std::shared_ptr<cm::CursorManager> cursorManager, 
-                std::shared_ptr<DisplayManager> displayManager,
+void renderLoop(std::shared_ptr<cursor_manager::CursorManager> cursorManager, 
+                std::shared_ptr<openyolo::input::DisplayManager> displayManager,
                 std::atomic<bool>& running) {
     try {
         LOG_DEBUG("Démarrage de la boucle de rendu");
@@ -272,23 +279,23 @@ int main(int argc, char* argv[]) {
     LOG_INFO("Création des gestionnaires...");
     
     // Créer le gestionnaire d'affichage avec la configuration
-    int width = g_config->getValue("Window", "width", 1024);
-    int height = g_config->getValue("Window", "height", 768);
-    bool fullscreen = g_config->getValue("Window", "fullscreen", false);
+    int width = g_config.getValue("Window", "width", 1024);
+    int height = g_config.getValue("Window", "height", 768);
+    bool fullscreen = g_config.getValue("Window", "fullscreen", false);
     
     LOG_DEBUG("Création du gestionnaire d'affichage...");
-    auto displayManager = std::make_shared<DisplayManager>();
+    auto displayManager = std::make_shared<input::DisplayManager>();
     
     // Configurer le gestionnaire d'affichage
     displayManager->setWindowSize(width, height);
     displayManager->setFullscreen(fullscreen);
     
     // Créer le gestionnaire de curseur avec la configuration
-    bool customCursors = g_config->getValue("Cursor", "enabled", true);
-    float cursorSize = g_config->getValue("Cursor", "size", 1.0f);
+    bool customCursors = g_config.getValue("Cursor", "enabled", true);
+    float cursorSize = g_config.getValue("Cursor", "size", 1.0f);
     
     LOG_DEBUG("Création du gestionnaire de curseur...");
-    auto cursorManager = std::make_shared<cm::CursorManager>();
+    auto cursorManager = std::make_shared<cursor_manager::CursorManager>();
     
     // Configurer le gestionnaire de curseur
     cursorManager->setEnabled(customCursors);
@@ -296,8 +303,8 @@ int main(int argc, char* argv[]) {
     
     // Créer le gestionnaire d'entrée
     LOG_DEBUG("Création du gestionnaire d'entrée...");
-    auto inputManager = std::make_shared<InputManager>();
-
+    auto inputManager = std::make_shared<input::InputManager>();
+    
     // Initialiser les gestionnaires
     try {
         LOG_INFO("Initialisation du gestionnaire d'affichage...");
@@ -321,55 +328,78 @@ int main(int argc, char* argv[]) {
     }
 
     // Créer et configurer la fenêtre principale
-    std::unique_ptr<MainWindow> mainWindow;
+    std::unique_ptr<Gtk::Window> mainWindow;
     
     try {
         LOG_INFO("Création de la fenêtre principale...");
-        mainWindow = std::make_unique<MainWindow>(cursorManager, displayManager, inputManager);
-
-        // Configurer l'intégration GTK après la création de la fenêtre
+        auto mainWindowPtr = new openyolo::gui::MainWindow(cursorManager, displayManager, inputManager);
+        mainWindow.reset(mainWindowPtr);
+        
+        // Configurer le gestionnaire d'entrée
         LOG_DEBUG("Configuration de l'intégration GTK...");
-        if (!inputManager->setupGTKIntegration(mainWindow.get(), cursorManager)) {
-            LOG_WARNING("L'intégration GTK n'a pas pu être configurée correctement");
-        }
+        inputManager->setupGTKIntegration(mainWindow.get(), cursorManager);
 
         // Ajouter les raccourcis par défaut
         LOG_DEBUG("Ajout des raccourcis par défaut...");
-        mainWindow->addDefaultShortcuts();
+// mainWindow->addDefaultShortcuts();  // Commenté car non implémenté dans Gtk::Window
+        // Fonction de mise à jour des raccourcis
+        auto updateShortcuts = [&cursorManager]() {
+            while (g_running) {
+                try {
+                    cursorManager->updateShortcuts();
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10)); // 100 FPS pour la détection des raccourcis
+                } catch (const std::exception& e) {
+                    LOG_ERROR("Erreur dans la boucle de mise à jour des raccourcis: " + std::string(e.what()));
+                    std::this_thread::sleep_for(std::chrono::seconds(1)); // Éviter une boucle d'erreurs trop rapide
+                }
+            }
+        };
         
+        // Démarrer le thread de rendu
+        std::thread renderThread(renderLoop, cursorManager, displayManager, std::ref(g_running));
+        
+        // Démarrer le thread de mise à jour des raccourcis
+        std::thread shortcutThread(updateShortcuts);
+    
+        // Exécuter la boucle principale de l'application
+        int result = EXIT_SUCCESS;
+        try {
+            LOG_INFO("Lancement de l'application...");
+            result = app->run(*mainWindow);
+        } catch (const std::exception& e) {
+            LOG_FATAL("Erreur dans la boucle principale: " + std::string(e.what()));
+            result = EXIT_FAILURE;
+        }
+
+        // Demander l'arrêt des threads
+        LOG_INFO("Arrêt des threads...");
+        g_running = false;
+
+        // Attendre que les threads se terminent
+        if (renderThread.joinable()) {
+            renderThread.join();
+        }
+        if (shortcutThread.joinable()) {
+            shortcutThread.join();
+        }
+        
+        return result;
     } catch (const std::exception& e) {
-        LOG_FATAL("Erreur lors de la création de la fenêtre principale: " + std::string(e.what()));
+        LOG_FATAL("Erreur lors de la configuration de l'application: " + std::string(e.what()));
         return EXIT_FAILURE;
     }
-
-    // Démarrer la boucle de rendu dans un thread séparé
-    LOG_INFO("Démarrage de la boucle de rendu...");
-    std::thread renderThread(renderLoop, cursorManager, displayManager, std::ref(g_running));
-
-    // Exécuter la boucle principale de l'application
-    int result = EXIT_SUCCESS;
-    try {
-        LOG_INFO("Démarrage de la boucle principale de l'application...");
-        result = app->run(*mainWindow);
-    } catch (const std::exception& e) {
-        LOG_FATAL("Erreur dans la boucle principale: " + std::string(e.what()));
-        result = EXIT_FAILURE;
-    }
-
-    // Demander l'arrêt du thread de rendu
-    LOG_INFO("Arrêt de la boucle de rendu...");
-    g_running = false;
-
-    // Attendre que le thread de rendu se termine
     if (renderThread.joinable()) {
         renderThread.join();
-        LOG_DEBUG("Thread de rendu arrêté");
+        LOG_DEBUG("Thread de rendu terminé.");
     }
     
-    // Nettoyer les ressources
+    if (shortcutThread.joinable()) {
+        shortcutThread.join();
+        LOG_DEBUG("Thread de raccourcis terminé.");
+    }
+    
+    // Libérer les ressources
     try {
-        LOG_DEBUG("Nettoyage des ressources...");
-        mainWindow.reset();
         inputManager.reset();
         cursorManager.reset();
         displayManager.reset();
@@ -377,5 +407,5 @@ int main(int argc, char* argv[]) {
         LOG_ERROR("Erreur lors du nettoyage des ressources: " + std::string(e.what()));
     }
 
-    return result;
+    return 0;
 }

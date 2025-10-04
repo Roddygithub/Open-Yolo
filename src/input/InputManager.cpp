@@ -1,56 +1,95 @@
-#include "../../include/input/InputManager.hpp"
-#include "../../include/gui/MainWindow.hpp"
-#include "backends/X11Backend.hpp" // Nous allons créer ce fichier ensuite
-#include "backends/WaylandBackend.hpp"
-
-#include <X11/Xlib.h>
 // Standard C++
-#include <algorithm> // Pour std::find_if
-#include <iostream>
-#include <memory>
-#include <sstream>
-#include <string>
-#include <unordered_map>
+#include <cstring>     // Pour strcmp, etc.
+#include <functional>  // Pour std::function
+#include <iostream>    // Pour std::cerr, std::endl
+#include <memory>      // Pour std::shared_ptr
+#include <stdexcept>   // Pour std::runtime_error
+#include <string>      // Pour std::string
 
-// GTKmm
-#include <gdk/gdk.h> // Pour les constantes GDK
-#include <gdk/gdkx.h> // Pour les fonctions X11
-#include <gdkmm/device.h>
-#include <gdkmm/display.h>
-#include <gdkmm/displaymanager.h>
-#include <gdkmm/seat.h>
-#include <glibmm/ustring.h>
-#include <gtkmm/application.h>
-#include <gtkmm/window.h>
- 
-InputManager::InputManager() : mainWindow_(nullptr) {
-    // Détecter si nous sommes sur Wayland ou X11
-    // GDK_IS_X11_DISPLAY est une macro pratique pour cela.
-    auto display = Gdk::Display::get_default();
-    if (display && GDK_IS_X11_DISPLAY(display->gobj())) {
-        std::cout << "Backend X11 détecté. Initialisation de X11Backend." << std::endl;
-        backend_ = std::make_unique<input::X11Backend>();
-    } else if (display && GDK_IS_WAYLAND_DISPLAY(display->gobj())) {
-        std::cout << "Backend Wayland détecté. Initialisation de WaylandBackend." << std::endl;
-        backend_ = std::make_unique<input::WaylandBackend>();
-        // std::cerr << "Le backend Wayland n'est pas encore implémenté." << std::endl;
-    } else {
-        std::cerr << "Serveur d'affichage non supporté." << std::endl;
+// GTKmm (doit être avant X11)
+#include <gtkmm.h>                // Pour les widgets GTK
+#include <gdk/gdk.h>              // Pour les fonctions GDK de bas niveau
+#include <gdkmm/device.h>         // Pour Gdk::Device
+#include <gdkmm/display.h>        // Pour Gdk::Display
+#include <gdkmm/displaymanager.h> // Pour Gdk::DisplayManager
+#include <gdkmm/seat.h>           // Pour Gdk::Seat
+
+// X11 (doit être après GTKmm)
+#include <gdk/gdkx.h>             // Pour les fonctions spécifiques à X11
+#include <X11/Xlib.h>             // Pour les fonctions X11
+
+// Project headers
+#include "../../include/input/InputManager.hpp"
+#include "../../include/input/backends/X11Backend.hpp"
+#include "../../include/gui/MainWindow.hpp"
+#ifdef HAVE_WAYLAND
+#include "../../include/input/backends/WaylandBackend.hpp"
+#endif
+
+namespace input {
+
+InputManager::InputManager() : mainWindow_(nullptr), backend_(nullptr) {
+    try {
+        // Détecter si nous sommes sur X11
+        auto display = Gdk::Display::get_default();
+        if (!display) {
+            throw std::runtime_error("Impossible d'obtenir le display GDK par défaut");
+        }
+
+        std::cerr << "Initialisation du gestionnaire d'entrée..." << std::endl;
+        
+        // Pour l'instant, nous utilisons uniquement le backend X11
+        std::cerr << "Création du backend X11..." << std::endl;
+        backend_ = new X11Backend();
+        if (!backend_) {
+            throw std::runtime_error("Échec de la création du backend X11");
+        }
+
+        // Initialiser le backend
+        if (!backend_->initialize()) {
+            delete backend_;
+            backend_ = nullptr;
+            throw std::runtime_error("Échec de l'initialisation du backend X11");
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Erreur dans InputManager: " << e.what() << std::endl;
+        if (backend_) {
+            delete backend_;
+            backend_ = nullptr;
+        }
+        throw;
     }
 }
 
 InputManager::~InputManager() {
+    // Nettoyer le backend
+    delete backend_;
+    backend_ = nullptr;
+    
     // Nettoyage des gestionnaires d'événements
     shortcuts_.clear();
 }
 
 bool InputManager::initialize() {
-    // L'initialisation est déléguée au backend.
-    // On lui passe un callback pour qu'il puisse nous notifier des raccourcis pressés.
-    return backend_ ? backend_->initialize() : false;
+    if (!backend_) {
+        std::cerr << "Erreur: Aucun backend d'entrée n'est disponible." << std::endl;
+        return false;
+    }
+    
+    try {
+        // Initialisation du backend
+        if (!backend_->initialize()) {
+            std::cerr << "Échec de l'initialisation du backend d'entrée." << std::endl;
+            return false;
+        }
+        return true;
+    } catch (const std::exception& e) {
+        std::cerr << "Erreur lors de l'initialisation du backend d'entrée: " << e.what() << std::endl;
+        return false;
+    }
 }
 
-void InputManager::setupGTKIntegration(MainWindow* window, std::shared_ptr<cursor_manager::CursorManager> cursorManager) {
+void InputManager::setupGTKIntegration(Gtk::Window* window, std::shared_ptr<cursor_manager::CursorManager> cursorManager) {
     if (!window) {
         throw std::invalid_argument("La fenêtre principale ne peut pas être nulle");
     }
@@ -86,13 +125,15 @@ bool InputManager::onKeyPressed(GdkEventKey* event) {
     return false;
 }
 
-bool InputManager::removeShortcut(const std::string& name) {
+void InputManager::removeShortcut(const std::string& name) {
     if (name.empty()) {
         throw std::invalid_argument("Le nom du raccourci ne peut pas être vide");
     }
 
     // Déléguer la suppression au backend
-    return backend_ ? backend_->unregisterShortcut(name) : false;
+    if (backend_) {
+        backend_->unregisterShortcut(name);
+    }
 }
 
 bool InputManager::parseAccelerator(const std::string& accel, guint& key, Gdk::ModifierType& mods) const {
@@ -132,3 +173,5 @@ bool InputManager::parseAccelerator(const std::string& accel, guint& key, Gdk::M
     mods = result_mods;
     return true;
 }
+
+} // namespace input
