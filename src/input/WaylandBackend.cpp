@@ -1,110 +1,263 @@
-#include "../../include/input/backends/WaylandBackend.hpp"
-#include <iostream>
+// Inclure d'abord les en-têtes standards C++
 #include <algorithm>
 #include <iomanip>
-#include <sstream>
+#include <iostream>
 #include <map>
 #include <set>
+#include <sstream>
 #include <stdexcept>
 
-// Spécialisation de std::hash pour Glib::ustring
-namespace std {
-    template<>
-    struct hash<Glib::ustring> {
-        size_t operator()(const Glib::ustring& s) const {
-            return std::hash<std::string>{}(s.raw());
-        }
-    };
-}
+// Définir _GNU_SOURCE si nécessaire
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 
-// Includes spécifiques à Wayland via GDK
+// Désactiver les avertissements pour GTK/GLib
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
+// Inclure les en-têtes GTK/GTKmm
+#include <glib.h>
+#include <glibmm.h>
+#include <glibmm/init.h>
 #include <gdk/gdkwayland.h>
-#include <gdkmm/window.h>
-#include <giomm/dbusproxy.h>
-#include <giomm/dbusconnection.h>
+#include <gdkmm.h>
+#include <giomm.h>
+#include <gtkmm.h>
+
+// Réactiver les avertissements
+#pragma GCC diagnostic pop
+
+// Sauvegarder les définitions de macros problématiques
+#pragma push_macro("None")
+#pragma push_macro("Bool")
+#pragma push_macro("Status")
+#pragma push_macro("Success")
+#pragma push_macro("Always")
+#pragma push_macro("False")
+#pragma push_macro("True")
+
+// Désactiver les macros problématiques
+#undef None
+#undef Bool
+#undef Status
+#undef Success
+#undef Always
+#undef False
+#undef True
+
+// Enfin nos en-têtes
+#include "../../include/input/backends/WaylandBackend.hpp"
 
 namespace input {
 
-// ... (Namespace with constants and logging helpers)
+// Constantes pour la gestion des reconnexions et des délais
+constexpr int MAX_RETRIES = 3;
+constexpr int RETRY_DELAY_SEC = 5;
+constexpr int DEBOUNCE_DELAY_MS = 100;
 
-// --- Implementation ---
+// Constantes pour D-Bus
+constexpr const char* DBUS_SERVICE = "org.freedesktop.portal.Desktop";
+constexpr const char* DBUS_PATH = "/org/freedesktop/portal/desktop";
+constexpr const char* DBUS_INTERFACE = "org.freedesktop.portal.GlobalShortcuts";
 
-namespace {
-    // Fonction utilitaire pour gérer les erreurs
-    void handleError(const std::string& message, const std::exception* e = nullptr) {
-        std::cerr << "Erreur: " << message;
-        if (e) {
-            std::cerr << " Détails: " << e->what();
-        }
-        std::cerr << std::endl;
-    }
-}
+// Définition des macros de journalisation
+#ifndef LOG_INFO
+#define LOG_INFO(msg) do { std::cout << "[INFO] " << (msg) << std::endl; } while(0)
+#endif
 
-WaylandBackend::WaylandBackend()
-    : m_window(nullptr),
+#ifndef LOG_ERROR
+#define LOG_ERROR(msg) do { std::cerr << "[ERROR] " << (msg) << std::endl; } while(0)
+#endif
+
+#ifndef LOG_DEBUG
+#define LOG_DEBUG(msg) do { std::cout << "[DEBUG] " << (msg) << std::endl; } while(0)
+#endif
+
+#ifndef LOG_WARNING
+#define LOG_WARNING(msg) do { std::cerr << "[WARNING] " << (msg) << std::endl; } while(0)
+#endif
+
+// Définition des macros de journalisation avec protection contre les effets de bord
+#ifndef LOG_INFO
+#define LOG_INFO(msg) do { std::cout << "[INFO] " << (msg) << std::endl; } while(0)
+#endif
+#ifndef LOG_ERROR
+#define LOG_ERROR(msg) do { std::cerr << "[ERROR] " << (msg) << std::endl; } while(0)
+#endif
+#ifndef LOG_DEBUG
+#define LOG_DEBUG(msg) do { std::cout << "[DEBUG] " << (msg) << std::endl; } while(0)
+#endif
+#ifndef LOG_WARNING
+#define LOG_WARNING(msg) do { std::ostringstream oss; oss << "[WARNING] " << msg; std::cerr << oss.str() << std::endl; } while(0)
+#endif
+
+WaylandBackend::WaylandBackend(InputManager* manager)
+    : m_manager(manager),
+      m_window(nullptr),
       m_initialized(false),
-      m_sessionState(SessionState::Disconnected),
-      m_retryCount(0) {}
+      m_sessionState(WaylandBackend::SessionState::Disconnected),
+      m_retryCount(0) {
+    LOG_INFO("Initialisation du backend Wayland...");
+}
 
 WaylandBackend::~WaylandBackend() {
-    if (m_updateTimer.connected()) {
-        m_updateTimer.disconnect();
+    LOG_INFO("Nettoyage du backend Wayland...");
+    if (this->m_updateTimer.connected()) {
+        this->m_updateTimer.disconnect();
     }
-    closeSession();
+    this->closeSession();
 }
 
-void WaylandBackend::handleError(const std::string& message, const std::exception* e) {
-    std::string full_message = message;
+void input::WaylandBackend::setWindow(Gtk::Window* window) {
+    this->m_window = window;
+    std::cout << "[WaylandBackend] Fenêtre associée : "
+              << (this->m_window ? "OK" : "NULL") << std::endl;
+    
+    if (this->m_window) {
+        auto display = this->m_window->get_display();
+        if (GDK_IS_WAYLAND_DISPLAY(display->gobj())) {
+            std::cout << "[WaylandBackend] Connexion au display Wayland..." << std::endl;
+        }
+    }
+}
+
+void WaylandBackend::setSessionState(SessionState state) {
+    if (this->m_sessionState == state) {
+        return;
+    }
+
+    SessionState oldState = this->m_sessionState;
+    this->m_sessionState = state;
+    
+    std::cout << "[WaylandBackend] Changement d'état de session : ";
+    
+    switch (this->m_sessionState) {
+        case SessionState::Disconnected: 
+            std::cout << "Déconnecté"; 
+            break;
+        case SessionState::Connecting:   
+            std::cout << "Connexion en cours..."; 
+            break;
+        case SessionState::Connected:    
+            std::cout << "Connecté"; 
+            break;
+        case SessionState::Reconnecting: 
+            std::cout << "Reconnexion..."; 
+            break;
+    }
+    
+    std::cout << std::endl;
+    
+    // Notifier les observateurs du changement d'état
+    for (const auto& callback : m_stateChangeCallbacks) {
+        if (callback) {
+            callback(oldState, m_state);
+        }
+    }
+}
+
+bool WaylandBackend::onKeyPressed(GdkEventKey* event) {
+    if (!event) {
+        return false;
+    }
+    
+    std::cout << "[WaylandBackend] Touche pressée : "
+              << gdk_keyval_name(event->keyval)
+              << " (keycode: " << event->keyval << ")"
+              << std::endl;
+    
+    // Ici, vous pouvez ajouter la logique de gestion des raccourcis
+    // Par exemple, vérifier si cette touche correspond à un raccourci enregistré
+    
+    return false; // Retourne true si l'événement a été traité, false sinon
+}
+
+void input::WaylandBackend::onSessionCreated(Glib::RefPtr<Gio::AsyncResult>& result) {
+    std::cout << "[WaylandBackend] Session Wayland créée (AsyncResult reçu)" << std::endl;
+    
+    try {
+        // Essayer de récupérer le résultat de la création de session
+        // et effectuer les opérations nécessaires
+        
+        // Exemple : marquer la session comme connectée
+        this->setSessionState(WaylandBackend::SessionState::Connected);
+        
+    } catch (const Glib::Error& error) {
+        std::cerr << "[WaylandBackend] Erreur lors de la création de la session: " 
+                  << error.what() << std::endl;
+        this->setSessionState(WaylandBackend::SessionState::Disconnected);
+    }
+}
+
+// Implémentation des méthodes de gestion des erreurs
+void WaylandBackend::handleError(const std::string& message, const Glib::Error* e) {
+    std::string full_message = "[WaylandBackend] " + message;
     if (e) {
         full_message += ": " + std::string(e->what());
     }
-    LOG_ERROR(full_message);
+    std::cerr << full_message << std::endl;
+    
+    // Appeler les callbacks d'erreur
     for (const auto& cb : m_errorCallbacks) {
         cb(full_message);
     }
 }
 
-bool WaylandBackend::isProxyValid() const {
-    return m_proxy && m_proxy->get_name_owner();
+void WaylandBackend::handleError(const std::string& message, const std::exception* e) {
+    std::string full_message = "[WaylandBackend] " + message;
+    if (e) {
+        full_message += ": " + std::string(e->what());
+    }
+    std::cerr << full_message << std::endl;
+    
+    // Appeler les callbacks d'erreur
+    for (const auto& cb : m_errorCallbacks) {
+        cb(full_message);
+    }
 }
 
-bool WaylandBackend::initialize() {
-    m_retryCount = 0;
+bool input::WaylandBackend::isProxyValid() const {
+    return this->m_proxy && !this->m_proxy->get_name_owner().empty();
+}
+
+bool input::WaylandBackend::initialize() {
+    this->m_retryCount = 0;
     auto gdkDisplay = Gdk::Display::get_default();
     if (!gdkDisplay || !GDK_IS_WAYLAND_DISPLAY(gdkDisplay->gobj())) {
-        handleError("Le backend Wayland ne peut être initialisé que sur un affichage Wayland.");
+        this->handleError("Le backend Wayland ne peut être initialisé que sur un affichage Wayland.");
         return false;
     }
-    setSessionState(SessionState::Connecting);
+    this->setSessionState(WaylandBackend::SessionState::Connecting);
     try {
-        m_dbusConnection = Gio::DBus::Connection::get_sync(Gio::DBus::BUS_TYPE_SESSION);
+        this->m_dbusConnection = Gio::DBus::Connection::get_sync(Gio::DBus::BUS_TYPE_SESSION);
     } catch (const Glib::Error& e) {
-        handleError("Erreur de connexion au bus D-Bus de session", &e);
-        setSessionState(SessionState::Disconnected);
+        this->handleError("Erreur de connexion au bus D-Bus de session", &e);
+        this->setSessionState(WaylandBackend::SessionState::Disconnected);
         return false;
     }
     Gio::DBus::Proxy::create(
-        m_dbusConnection,
-        DBUS_SERVICE, DBUS_PATH, DBUS_INTERFACE,
-        [this](Glib::RefPtr<Gio::AsyncResult>& result) { onProxyCreated(result); }
+        this->m_dbusConnection,
+        input::DBUS_SERVICE, input::DBUS_PATH, input::DBUS_INTERFACE,
+        [this](Glib::RefPtr<Gio::AsyncResult>& result) { this->onProxyCreated(result); }
     );
-    m_initialized = true;
+    this->m_initialized = true;
     LOG_INFO("Initialisation du backend Wayland (via D-Bus Portal) en cours...");
     return true;
 }
 
-void WaylandBackend::onProxyCreated(Glib::RefPtr<Gio::AsyncResult>& result) {
+void input::WaylandBackend::onProxyCreated(Glib::RefPtr<Gio::AsyncResult>& result) {
     try {
-        m_proxy = Gio::DBus::Proxy::create_finish(result);
-        if (!isProxyValid()) {
+        this->m_proxy = Gio::DBus::Proxy::create_finish(result);
+        if (!this->isProxyValid()) {
             throw std::runtime_error("Le service de portail XDG n'est pas disponible. Vérifiez que xdg-desktop-portal est installé et en cours d'exécution.");
         }
-        LOG_INFO("Proxy D-Bus pour GlobalShortcuts créé. Fourni par: " + m_proxy->get_name_owner());
-        createPortalSession();
+        LOG_INFO("Proxy D-Bus pour GlobalShortcuts créé. Fourni par: " + this->m_proxy->get_name_owner());
+        this->createPortalSession();
     } catch (const std::runtime_error& e) {
-        handleError("Erreur lors de la création du proxy D-Bus", &e);
-        setSessionState(SessionState::Reconnecting);
-        scheduleReconnect();
+        this->handleError("Erreur lors de la création du proxy D-Bus", &e);
+        this->setSessionState(WaylandBackend::SessionState::Reconnecting);
+        this->scheduleReconnect();
     }
 }
 
@@ -130,70 +283,76 @@ void WaylandBackend::createPortalSession() {
     }
 }
 
-void WaylandBackend::closeSession() {
-    if (m_sessionHandle.empty()) return;
+void input::WaylandBackend::closeSession() {
+    if (this->m_sessionHandle.empty()) return;
 
-    if (!isProxyValid()) {
+    if (!this->isProxyValid()) {
         LOG_WARNING("Proxy D-Bus non valide, impossible de fermer proprement la session.");
     } else {
         try {
-            m_proxy->call("CloseSession", Glib::VariantContainerBase::create_tuple({ Glib::Variant<Glib::ustring>::create(m_sessionHandle) }));
+            this->m_proxy->call("CloseSession", Glib::VariantContainerBase::create_tuple({ Glib::Variant<Glib::ustring>::create(this->m_sessionHandle) }));
         } catch (const std::exception& e) {
-            handleError("Erreur (ignorée) lors de la demande de fermeture de la session D-Bus", &e);
+            this->handleError("Erreur (ignorée) lors de la demande de fermeture de la session D-Bus", &e);
         }
     }
-    m_sessionHandle.clear();
-    m_sessionProxy.reset();
-    setSessionState(SessionState::Disconnected);
+    this->m_sessionHandle.clear();
+    this->m_sessionProxy.reset();
+    this->setSessionState(WaylandBackend::SessionState::Disconnected);
 }
 
-void WaylandBackend::scheduleUpdate() {
-    if (m_updateTimer.connected()) {
-        m_updateTimer.disconnect();
+// Délai de 100ms
+void input::WaylandBackend::scheduleUpdate() {
+    // Si une mise à jour est déjà planifiée, on ne fait rien
+    if (this->m_updateTimer.connected()) {
+        return;
     }
-    m_updateTimer = Glib::signal_timeout().connect([this]() {
-        if (m_sessionState == SessionState::Connected) {
-            try {
-                if (m_shortcuts.empty()) {
-                    closeSession();
-                } else {
-                    recreateSession();
+    
+    // Planifier la mise à jour avec un délai pour regrouper les changements
+    this->m_updateTimer = Glib::signal_timeout().connect(
+        [this]() {
+            if (this->m_sessionState == WaylandBackend::SessionState::Connected) {
+                try {
+                    if (this->m_shortcuts.empty()) {
+                        this->closeSession();
+                    } else {
+                        this->recreateSession();
+                    }
+                } catch (const std::exception& e) {
+                    this->handleError("Erreur lors de la mise à jour de la session", &e);
                 }
-            } catch (const std::exception& e) {
-                handleError("Échec de la mise à jour des raccourcis", &e);
             }
-        }
-        m_updateTimer = {};
-        return false;
-    }, DEBOUNCE_DELAY_MS);
+            return false; // Ne pas répéter le timer
+        },
+        input::DEBOUNCE_DELAY_MS
+    );
 }
 
-bool WaylandBackend::registerShortcut(const std::string& name, const std::string& accelerator, const KeyCallback& callback) {
-    if (m_sessionState != SessionState::Connected) {
+bool input::WaylandBackend::registerShortcut(const std::string& name, const std::string& accelerator, const KeyCallback& callback) {
+    if (this->m_sessionState != WaylandBackend::SessionState::Connected) {
         LOG_WARNING("Cannot register shortcut: Not connected to session");
         return false;
     }
 
     if (name.empty()) {
-        handleError("Shortcut name cannot be empty");
+        this->handleError("Shortcut name cannot be empty");
         return false;
     }
 
     if (!callback) {
-        handleError("Callback for shortcut '" + name + "' cannot be null");
+        this->handleError("Callback for shortcut '" + name + "' cannot be null");
         return false;
     }
 
     try {
         // Convert accelerator to portal format
-        std::string portalShortcut = convertToPortalShortcut(accelerator);
+        std::string portalShortcut = this->convertToPortalShortcut(accelerator);
         if (portalShortcut.empty()) {
             LOG_ERROR("Failed to convert shortcut: " + accelerator);
             return false;
         }
 
         // Check if shortcut already exists
-        if (m_shortcuts.find(name) != m_shortcuts.end()) {
+        if (this->m_shortcuts.find(name) != this->m_shortcuts.end()) {
             LOG_WARNING("Shortcut already registered: " + name);
             return false;
         }
@@ -213,69 +372,24 @@ bool WaylandBackend::registerShortcut(const std::string& name, const std::string
             ))
         });
 
-        m_proxy->call_sync("Call", params);
+        // Enregistrer le raccourci
+        this->m_proxy->call_sync("Call", params);
         
-        // Store the callback
-        m_shortcuts[name] = { accelerator, callback };
+        // Stocker le callback
+        this->m_shortcuts[name] = { accelerator, callback };
         
         LOG_DEBUG("Registered shortcut: " + name + " -> " + accelerator);
         return true;
     } catch (const Glib::Error& e) {
-        handleError("Failed to register shortcut: " + std::string(e.what()));
+        this->handleError("Failed to register shortcut: " + std::string(e.what()));
         return false;
     } catch (const std::exception& e) {
-        handleError("Unexpected error while registering shortcut", &e);
+        this->handleError("Unexpected error while registering shortcut", &e);
         return false;
     }
 }
 
-bool WaylandBackend::unregisterShortcut(const std::string& name) {
-    if (m_sessionState != SessionState::Connected) {
-        LOG_WARNING("Cannot unregister shortcut: Not connected to session");
-        return false;
-    }
-
-    if (name.empty()) {
-        handleError("Shortcut name cannot be empty");
-        return false;
-    }
-
-    try {
-        // Check if shortcut exists
-        auto it = m_shortcuts.find(name);
-        if (it == m_shortcuts.end()) {
-            LOG_WARNING("Shortcut not found: " + name);
-            return false;
-        }
-
-        // Unregister shortcut from the portal
-        auto params = Glib::VariantContainerBase::create_tuple({
-            Glib::Variant<Glib::ustring>::create("org.freedesktop.portal.Desktop"),
-            Glib::Variant<Glib::ustring>::create("org.freedesktop.portal.GlobalShortcuts"),
-            Glib::Variant<Glib::ustring>::create("UnbindShortcuts"),
-            Glib::wrap(g_variant_new_parsed("(@as)",
-                g_variant_new_parsed("['%s']", name.c_str())
-            ))
-        });
-
-        m_proxy->call_sync("Call", params);
-        
-        // Remove the callback
-        m_shortcuts.erase(it);
-        
-        LOG_DEBUG("Unregistered shortcut: " + name);
-        return true;
-    } catch (const Glib::Error& e) {
-        handleError("Failed to unregister shortcut: " + std::string(e.what()));
-        return false;
-    } catch (const std::exception& e) {
-        handleError("Unexpected error while unregistering shortcut", &e);
-        return false;
-    }
-}
-
-std::string WaylandBackend::convertToPortalShortcut(const std::string& gtkAccel) {
-    // Convert GTK accelerator (e.g., "<Control>q") to portal format (e.g., "<Control>q")
+std::string input::WaylandBackend::convertToPortalShortcut(const std::string& gtkAccel) {
     // This is a basic implementation and might need adjustments
     std::string result = gtkAccel;
     
@@ -287,7 +401,7 @@ std::string WaylandBackend::convertToPortalShortcut(const std::string& gtkAccel)
     // Example: "Control" -> "Ctrl"
     size_t pos = 0;
     while ((pos = result.find("control", pos)) != std::string::npos) {
-        result.replace(pos, 7, "Ctrl");
+        result.replace(pos, 7, "ctrl");
         pos += 4;
     }
     
@@ -298,147 +412,101 @@ std::string WaylandBackend::convertToPortalShortcut(const std::string& gtkAccel)
     return result;
 }
 
-void WaylandBackend::setWindow(Gtk::Window* window) { m_window = window; }
-bool WaylandBackend::onKeyPressed(GdkEventKey* event) { return false; }
-void WaylandBackend::setMinLogLevel(LogLevel level) { m_minLogLevel = level; }
-void WaylandBackend::addStateChangeCallback(StateChangeCallback&& callback) { m_stateChangeCallbacks.push_back(std::move(callback)); }
-void WaylandBackend::addErrorCallback(ErrorCallback&& callback) { m_errorCallbacks.push_back(std::move(callback)); }
-
-void WaylandBackend::setSessionState(SessionState newState) {
-    static const std::map<SessionState, std::set<SessionState>> validTransitions = {
-        {SessionState::Disconnected, {SessionState::Connecting}},
-        {SessionState::Connected,    {SessionState::Disconnected}},
-        {SessionState::Reconnecting, {SessionState::Connecting, SessionState::Disconnected}}
-    };
-    if (m_sessionState == newState) return;
-    if (validTransitions.count(m_sessionState) == 0 || validTransitions.at(m_sessionState).count(newState) == 0) {
-        handleError("Transition d'état invalide: " + to_string(m_sessionState) + " -> " + to_string(newState));
+void input::WaylandBackend::addErrorCallback(WaylandBackend::ErrorCallback&& callback) {
+    if (!callback) {
+        this->handleError("Callback cannot be null");
         return;
     }
-    SessionState oldState = m_sessionState;
-    m_sessionState = newState;
-    for (const auto& callback : m_stateChangeCallbacks) {
-        try {
-            callback(oldState, newState);
-        } catch (const std::exception& e) {
-            handleError("Erreur dans le callback de changement d'état", &e);
-        }
-    }
+    m_errorCallbacks.push_back(std::move(callback));
 }
 
-void WaylandBackend::onSessionCreated(Glib::RefPtr<Gio::AsyncResult>& result) {
+void input::WaylandBackend::onBindShortcutsResponse(Glib::RefPtr<Gio::AsyncResult>& result) {
     try {
-        auto res = m_proxy->call_finish(result);
-        Glib::Variant<Glib::ustring> handle_variant;
-        res.get_child(handle_variant);
-        m_sessionHandle = handle_variant.get();
-        setSessionState(SessionState::Connected);
-
-        using ShortcutArray = std::vector<std::tuple<Glib::ustring, Glib::ustring, std::map<Glib::ustring, Glib::VariantBase>>>;
-        ShortcutArray shortcuts_to_bind;
-        for (const auto& pair : m_shortcuts) {
-            shortcuts_to_bind.emplace_back(pair.first, convertToPortalShortcut(pair.second.accelerator), std::map<Glib::ustring, Glib::VariantBase>{});
-        }
-        auto shortcuts_variant = Glib::Variant<ShortcutArray>::create(shortcuts_to_bind);
-        auto params = Glib::VariantContainerBase::create_tuple({ Glib::Variant<Glib::ustring>::create(m_sessionHandle), shortcuts_variant });
-
-        m_proxy->call("BindShortcuts", params,
-            [this](Glib::RefPtr<Gio::AsyncResult>& bind_result) {
-                 try {
-                     m_proxy->call_finish(bind_result);
-                 } catch (const Glib::Error& e) {
-                     handleError("Erreur lors de la liaison des raccourcis", &e);
-                 }
-            }
-        );
-        m_proxy->signal_signal().connect(sigc::mem_fun(*this, &WaylandBackend::onSessionShortcutActivated));
+        this->m_proxy->call_finish(result);
+        this->setSessionState(WaylandBackend::SessionState::Connected);
     } catch (const Glib::Error& e) {
-        handleError("Erreur lors de la création de la session D-Bus", &e);
-        scheduleReconnect();
-    }
-}
-
-bool WaylandBackend::registerShortcut(const std::string& name, const std::string& accelerator, const KeyCallback& callback) {
-    if (m_sessionState != SessionState::Connected) {
-        LOG_WARNING("Cannot register shortcut: Not connected to session");
-        return false;
-    }
-
-    try {
-        auto it = m_shortcuts.find(name);
-        if (it == m_shortcuts.end()) {
-            LOG_WARNING("Shortcut not found: " + name);
-            return false;
-        }
-
-        // Supprimer le raccourci du portail
-        auto params = Glib::VariantContainerBase::create_tuple({
-            Glib::Variant<Glib::ustring>::create("org.freedesktop.portal.Desktop"),
-            Glib::Variant<Glib::ustring>::create("org.freedesktop.portal.GlobalShortcuts"),
-            Glib::Variant<Glib::ustring>::create("UnbindShortcuts"),
-            Glib::wrap(g_variant_new_parsed("(@as)",
-                g_variant_new_parsed("['%s']", name.c_str())
-            ))
-        });
-
-        m_proxy->call_sync("Call", params);
-        
-        // Supprimer le callback
-        m_shortcuts.erase(it);
-        
-        LOG_DEBUG("Unregistered shortcut: " + name);
-        return true;
-    } catch (const Glib::Error& e) {
-        handleError("Failed to unregister shortcut: " + std::string(e.what()));
-        return false;
+        this->handleError("Erreur lors de la liaison des raccourcis", &e);
+        this->setSessionState(WaylandBackend::SessionState::Reconnecting);
+        this->scheduleReconnect();
     } catch (const std::exception& e) {
-        handleError("Unexpected error while unregistering shortcut", &e);
-        return false;
+        this->handleError("Erreur inattendue lors de la liaison des raccourcis", &e);
+        this->setSessionState(WaylandBackend::SessionState::Reconnecting);
+        this->scheduleReconnect();
+    }
+}
+
+void input::WaylandBackend::recreateSession() {
+    try {
+        // Fermer la session existante si elle est ouverte
+        this->closeSession();
+        
+        // Recréer la session
+        this->createPortalSession();
+        
+        // Réenregistrer tous les raccourcis
+        auto shortcutsCopy = this->m_shortcuts;
+        this->m_shortcuts.clear();
+        
+        for (const auto& [name, shortcut] : shortcutsCopy) {
+            if (!this->registerShortcut(name, shortcut.accelerator, shortcut.callback)) {
+                this->handleError("Échec du réenregistrement du raccourci: " + name);
+            }
+        }
+        
+        LOG_INFO("Session recréée avec succès");
+    } catch (const std::exception& e) {
+        this->handleError("Erreur lors de la recréation de la session", &e);
+        this->scheduleReconnect();
+    }
+}
+
+void input::WaylandBackend::scheduleReconnect() {
+    if (this->m_retryCount >= input::MAX_RETRIES) {
+        this->handleError("Nombre maximum de tentatives de reconnexion atteint");
+        this->setSessionState(WaylandBackend::SessionState::Disconnected);
+        return;
+    }
+
+    this->m_retryCount++;
+    std::ostringstream oss;
+    oss << "Tentative de reconnexion " << this->m_retryCount << "/" << input::MAX_RETRIES;
+    LOG_WARNING(oss.str());
+    
+    this->m_updateTimer = Glib::signal_timeout().connect(
+        sigc::bind_return(
+            sigc::mem_fun(*this, &WaylandBackend::initialize),
+            false // Ne pas répéter
+        ),
+        input::RETRY_DELAY_SEC * 1000 // Convertir en millisecondes
+    );
+}
+void input::WaylandBackend::onSessionShortcutActivated(const Glib::ustring& sender_name,
+                                                      const Glib::ustring& signal_name,
+                                                      const Glib::VariantContainerBase& parameters) {
     if (signal_name != "GlobalShortcutFired" || parameters.get_n_children() < 2) return;
     try {
-{{ ... }}
-        parameters.get_children(params);
-        Glib::ustring session_handle = params.get<0>();
-        Glib::ustring shortcut_id = params.get<1>();
-        if (session_handle != m_sessionHandle) return;
-        auto it = m_shortcuts.find(shortcut_id);
-        if (it != m_shortcuts.end()) {
+        Glib::Variant<Glib::ustring> session_handle, shortcut_id;
+        parameters.get_child(session_handle, 0);
+        parameters.get_child(shortcut_id, 1);
+        
+        if (session_handle.get() != this->m_sessionHandle) return;
+        
+        auto it = this->m_shortcuts.find(shortcut_id.get());
+        if (it != this->m_shortcuts.end()) {
             it->second.callback();
         }
     } catch (const Glib::Error& e) {
-        handleError("Erreur lors du traitement du signal GlobalShortcutFired", &e);
+        this->handleError("Erreur lors du traitement du signal GlobalShortcutFired", &e);
     }
 }
 
-void WaylandBackend::scheduleReconnect() {
-    if (m_retryCount < MAX_RETRIES) {
-        m_retryCount++;
-        Glib::signal_timeout().connect_seconds([this]() { initialize(); return false; }, RETRY_DELAY_SEC);
-    }
-}
 
-void WaylandBackend::recreateSession() {
-    try {
-        closeSession();
-        if (!m_shortcuts.empty()) {
-            createPortalSession();
-        }
-    } catch (const std::exception& e) {
-        handleError("Échec de la recréation de la session", &e);
-        scheduleReconnect();
-    }
-}
-
-std::string WaylandBackend::convertToPortalShortcut(const std::string& gtkAccel) {
-    std::string portalAccel = gtkAccel;
-    portalAccel.erase(std::remove(portalAccel.begin(), portalAccel.end(), '<'), portalAccel.end());
-    std::replace(portalAccel.begin(), portalAccel.end(), '>', '+');
-    if (!portalAccel.empty() && portalAccel.back() == '+') {
-        portalAccel.pop_back();
-    }
-    return portalAccel;
-}
-
-#pragma endregion
-
+// Restaurer les définitions de macros
+#pragma pop_macro("None")
+#pragma pop_macro("Bool")
+#pragma pop_macro("Status")
+#pragma pop_macro("Success")
+#pragma pop_macro("Always")
+#pragma pop_macro("False")
+#pragma pop_macro("True")
 } // namespace input

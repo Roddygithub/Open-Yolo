@@ -1,11 +1,30 @@
 #ifndef WAYLAND_BACKEND_HPP
 #define WAYLAND_BACKEND_HPP
 
+#include <gdk/gdkwayland.h>
+#include <gtkmm.h>
 #include "../InputBackend.hpp"
 #include <unordered_map>
 #include <memory>
+#include <string>
 #include <giomm/dbusproxy.h>
 #include <giomm/dbusconnection.h>
+#include <sigc++/connection.h>
+
+// Spécialisation de std::hash pour Glib::ustring
+namespace std {
+    template<>
+    struct hash<Glib::ustring> {
+        std::size_t operator()(const Glib::ustring& s) const noexcept {
+            // Utilisation de la méthode raw() si disponible, sinon utiliser std::string
+            #if GLIBMM_MAJOR_VERSION > 2 || (GLIBMM_MAJOR_VERSION == 2 && GLIBMM_MINOR_VERSION >= 68)
+                return std::hash<std::string>{}(s.raw());
+            #else
+                return std::hash<std::string>{}(s);
+            #endif
+        }
+    };
+}
 
 namespace input {
 
@@ -26,6 +45,9 @@ namespace input {
  *     std::cout << "State changed: " << to_string(oldState) << " -> " << to_string(newState) << std::endl;
  * });
  */
+// Déclaration anticipée de la classe InputManager
+class InputManager;
+
 class WaylandBackend : public InputBackend {
 public:
     /// Niveaux de journalisation pour le backend.
@@ -44,40 +66,42 @@ public:
         Reconnecting   ///< En attente d'une nouvelle tentative de connexion.
     };
 
-    /// Callback pour les changements d'état de la session.
     using StateChangeCallback = std::function<void(SessionState oldState, SessionState newState)>;
 
-    WaylandBackend();
+    WaylandBackend(InputManager* manager);
     ~WaylandBackend() override;
 
+    // Implémentation de l'interface InputBackend
+    bool isInitialized() const override { return m_initialized; }
     bool initialize() override;
-    void setWindow(Gtk::Window* window) override;
+    bool isAvailable() const override;
+    void registerShortcut(const std::string& name, const std::string& accelerator, KeyCallback callback) override;
+    void unregisterShortcut(const std::string& name) override;
+    bool handleKeyEvent(guint keyval, GdkModifierType mods) override;
+    
     /**
-     * @brief Enregistre un raccourci.
-     * @param name Nom unique du raccourci.
-     * @param accelerator Chaîne de l'accélérateur (ex: "<Control>F10").
-     * @param callback Fonction à appeler.
-     * @return true si l'enregistrement a réussi.
-     * @example
-     * backend->registerShortcut("screenshot", "<Control><Alt>S", []() { ... });
+     * @brief Gestionnaire d'événements de touche pressée (obsolète, utiliser handleKeyEvent).
+     * @param event L'événement de touche.
+     * @return true si l'événement a été traité, false sinon.
+     * @deprecated Utiliser handleKeyEvent à la place.
      */
-    bool registerShortcut(const std::string& name, const std::string& accelerator, const KeyCallback& callback) override;
+    bool onKeyPressed(GdkEventKey* event);
+    
+    // Méthodes spécifiques à Wayland
+    void setWindow(Gtk::Window* window);
+    
     /**
-     * @brief Supprime un raccourci enregistré.
-     * @param name Nom du raccourci à supprimer.
-     * @return true si le raccourci a été trouvé et que sa suppression a été initiée, false sinon.
-     * @example
-     * // Exemple d'utilisation :
-     * backend->unregisterShortcut("screenshot");
-     * // La session sera automatiquement recréée avec les raccourcis restants.
+     * @brief Arrête le backend et libère les ressources.
+     * @return true si l'arrêt a réussi, false sinon.
      */
-    bool unregisterShortcut(const std::string& name) override;
-    bool onKeyPressed(GdkEventKey* event) override;
+    virtual bool shutdown();
 
     void setMinLogLevel(LogLevel level);
     void addStateChangeCallback(StateChangeCallback&& callback);
 
 private:
+    void bindExistingShortcuts(const Glib::ustring& session_handle);
+    
     // Gestion D-Bus
     /**
      * @brief Callback appelé après la tentative de création du proxy D-Bus.
@@ -118,10 +142,32 @@ private:
     std::string convertToPortalShortcut(const std::string& gtkAccel);
     void setSessionState(SessionState newState);
     void ensureConnected();
+    
+    // Callback pour les erreurs
+    using ErrorCallback = std::function<void(const std::string& message)>;
+    
+    // Méthodes de gestion des erreurs
+    void handleError(const std::string& message, const Glib::Error* e = nullptr);
+    void handleError(const std::string& message, const std::exception* e);
+    void addErrorCallback(ErrorCallback&& callback);
+    
+    // Gestion des raccourcis
+    void onBindShortcutsResponse(Glib::RefPtr<Gio::AsyncResult>& result);
+    
+    // Vérification de la validité du proxy
+    bool isProxyValid() const;
+    
+    /**
+     * @brief Planifie une mise à jour des raccourcis
+     * @details Cette méthode est utilisée pour regrouper plusieurs mises à jour de raccourcis
+     * en une seule opération, en évitant les appels redondants au service D-Bus.
+     */
+    void scheduleUpdate();
 
     // Membres
+    InputManager* m_manager;
     Gtk::Window* m_window;
-    Glib::RefPtr<Gio::DBus::Connection> m_dbusConnection;
+    Glib::RefPtr<Gio::DBus::Connection> m_connection;
     Glib::RefPtr<Gio::DBus::Proxy> m_proxy;
     Glib::RefPtr<Gio::DBus::Proxy> m_sessionProxy;
     Glib::ustring m_sessionHandle;
@@ -129,15 +175,35 @@ private:
     // État
     struct ShortcutData {
         std::string accelerator;
-        KeyCallback callback;
+        std::function<void()> callback;
+        
+        // Constructeur par défaut
+        ShortcutData() = default;
+        
+        // Constructeur avec initialisation
+        ShortcutData(const std::string& accel, std::function<void()> cb)
+            : accelerator(accel), callback(cb) {}
+            
+        // Opérateur d'assignation depuis un callback
+        ShortcutData& operator=(std::function<void()> cb) {
+            callback = cb;
+            return *this;
+        }
     };
 
     LogLevel m_minLogLevel = LogLevel::Info;
     std::vector<StateChangeCallback> m_stateChangeCallbacks;
+    std::vector<std::function<void(const std::string&)>> m_errorCallbacks;
+    
+    // Connexions et états
+    sigc::connection m_reconnectConnection;
+    std::unordered_map<std::string, ShortcutData> m_shortcuts;
+    std::unordered_map<std::string, std::string> m_pendingShortcuts;
+    sigc::connection m_updateTimer;
+    sigc::connection m_reconnectTimer;
     int m_retryCount = 0;
     SessionState m_sessionState = SessionState::Disconnected;
     bool m_initialized;
-    std::unordered_map<Glib::ustring, ShortcutData> m_shortcuts;
 };
 
 } // namespace input

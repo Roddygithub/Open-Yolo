@@ -17,8 +17,18 @@ add_subdirectory(gui)
 # Création de l'exécutable avec la version simplifiée
 add_executable(OpenYolo 
     main_simple.cpp
-    main_globals.cpp
+    openyolo/AppCore.cpp
 )
+
+# Trouver les dépendances nécessaires
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GTKMM3 REQUIRED gtkmm-3.0)
+pkg_check_modules(GDKMM3 REQUIRED gdkmm-3.0)
+pkg_check_modules(GLIBMM2_4 REQUIRED glibmm-2.4)
+pkg_check_modules(GIOMM2_4 REQUIRED giomm-2.4)
+pkg_check_modules(CAIROMM REQUIRED cairomm-1.0)
+pkg_check_modules(PANGOMM REQUIRED pangomm-1.4)
+pkg_check_modules(ATKMM REQUIRED atkmm-1.6)
 
 # Liaison des bibliothèques d'objets à l'exécutable
 target_link_libraries(OpenYolo PRIVATE
@@ -27,20 +37,33 @@ target_link_libraries(OpenYolo PRIVATE
     cursormanager
     displaymanager
     config
+    ${GTKMM3_LIBRARIES}
+    ${GDKMM3_LIBRARIES}
+    ${GLIBMM2_4_LIBRARIES}
+    ${GIOMM2_4_LIBRARIES}
+    ${CAIROMM_LIBRARIES}
+    ${PANGOMM_LIBRARIES}
+    ${ATKMM_LIBRARIES}
+    ${X11_LIBRARIES}
+    ${X11_X11_LIB}
+    ${X11_Xfixes_LIB}
+    ${X11_Xcursor_LIB}
+    dl
+    pthread
 )
 
 # Configuration des propriétés de la cible
-# Les includes sont maintenant gérés par les bibliothèques d'objets,
-# mais on peut le laisser pour la compatibilité avec certains IDE.
 target_include_directories(OpenYolo PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/src
+    ${GTKMM3_INCLUDE_DIRS}
+    ${GDKMM3_INCLUDE_DIRS}
+    ${GLIBMM2_4_INCLUDE_DIRS}
+    ${GIOMM2_4_INCLUDE_DIRS}
+    ${CAIROMM_INCLUDE_DIRS}
+    ${PANGOMM_INCLUDE_DIRS}
+    ${ATKMM_INCLUDE_DIRS}
 )
-
-# En-têtes précompilés (optionnel, mais bon à avoir)
-# set(PCH_HEADER "${CMAKE_SOURCE_DIR}/include/stdafx.h")
-# target_precompile_headers(OpenYolo PUBLIC $<BUILD_INTERFACE:${PCH_HEADER}>)
-
 
 # Configuration des propriétés de compilation
 target_compile_features(OpenYolo PRIVATE cxx_std_17)
@@ -60,8 +83,6 @@ target_compile_options(OpenYolo PRIVATE
 )
 
 # Liaison des bibliothèques externes restantes
-# Les dépendances principales (GTK, OpenGL, X11) sont maintenant liées
-# aux bibliothèques d'objets qui les utilisent.
 target_link_libraries(OpenYolo PRIVATE
     ${SDL2_LIBRARIES}
     ${SDL2_IMAGE_LIBRARIES}

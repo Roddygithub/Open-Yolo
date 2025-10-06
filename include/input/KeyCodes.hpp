@@ -1,6 +1,18 @@
 #pragma once
 
+// Désactiver les avertissements pour X11
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
+// Définir X_DISPLAY_MISSING avant d'inclure Xlib.h
+#define X_DISPLAY_MISSING
+
+// Inclure les en-têtes X11
+#include <X11/Xlib.h>
 #include <X11/keysym.h>
+
+// Réactiver les avertissements
+#pragma GCC diagnostic pop
 
 namespace input {
 

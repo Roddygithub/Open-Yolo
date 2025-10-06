@@ -40,6 +40,9 @@ update-desktop-database /usr/share/applications
 update-mime-database /usr/share/mime
 gtk-update-icon-cache /usr/share/icons/hicolor
 
+# Determine the user who invoked sudo
+SUDO_USER_HOME=$(getent passwd "${SUDO_USER:-$USER}" | cut -d: -f6)
+
 # Demander la suppression des fichiers utilisateur
 read -p "Voulez-vous supprimer les fichiers de configuration utilisateur ? [o/N] " -n 1 -r
 echo
@@ -48,6 +51,13 @@ if [[ $REPLY =~ ^[Oo]$ ]]; then
     rm -rf "$HOME/.config/open-yolo"
     rm -rf "$HOME/.local/share/open-yolo"
     rm -f "$HOME/.local/share/applications/open-yolo.desktop"
+    if [ -n "$SUDO_USER_HOME" ] && [ -d "$SUDO_USER_HOME" ]; then
+        echo "Suppression des fichiers utilisateur pour '$SUDO_USER'..."
+        rm -rf "$SUDO_USER_HOME/.config/open-yolo"
+        rm -rf "$SUDO_USER_HOME/.local/share/open-yolo"
+    else
+        echo "[AVERTISSEMENT] Impossible de déterminer le répertoire personnel de l'utilisateur. Fichiers de configuration non supprimés."
+    fi
 fi
 
 echo "=== Désinstallation terminée avec succès ==="

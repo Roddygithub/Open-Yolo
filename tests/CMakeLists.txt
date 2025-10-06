@@ -16,7 +16,7 @@ if(BUILD_TESTS)
         test_theme_manager.cpp
     )
 
-    # Créer l'exécutable de test
+    # Créer l'exécutable de test principal
     add_executable(${PROJECT_NAME}-tests ${TEST_SOURCES})
 
     # Inclure les répertoires nécessaires
@@ -24,28 +24,14 @@ if(BUILD_TESTS)
         PRIVATE
             ${CMAKE_SOURCE_DIR}/include
             ${CMAKE_SOURCE_DIR}/src
-            ${GTKMM_INCLUDE_DIRS}
+            ${GTKMM3_INCLUDE_DIRS}
+            ${GIOMM2_4_INCLUDE_DIRS}
             ${SDL2_INCLUDE_DIRS}
             ${SDL2_IMAGE_INCLUDE_DIRS}
-            ${GLEW_INCLUDE_DIRS}
             ${GIF_INCLUDE_DIRS}
             ${OPENGL_INCLUDE_DIR}
     )
 
-    # Définitions de compilation
-    target_compile_definitions(${PROJECT_NAME}-tests
-        PRIVATE
-            ${GTKMM_CFLAGS_OTHER}
-    )
-
-    # Lier les dépendances
-    target_link_libraries(${PROJECT_NAME}-tests PRIVATE
-        inputmanager
-        ${GTEST_LIBRARIES}
-        ${GTEST_MAIN_LIBRARIES}
-        pthread
-    )
-    
     # Ajout des dépendances pour Wayland si disponible
     if(WAYLAND_CLIENT_FOUND AND WAYLAND_EGL_FOUND AND WAYLAND_CURSOR_FOUND AND XKBCOMMON_FOUND)
         target_include_directories(${PROJECT_NAME}-tests
@@ -65,24 +51,78 @@ if(BUILD_TESTS)
         )
     endif()
 
+    # Définitions de compilation
+    target_compile_definitions(${PROJECT_NAME}-tests
+        PRIVATE
+            ${GTKMM_CFLAGS_OTHER}
+    )
+
+    # Lier les dépendances
     target_link_libraries(${PROJECT_NAME}-tests
         PRIVATE
             GTest::GTest
             GTest::Main
-            ${CMAKE_THREAD_LIBS_INIT}
             config
             cursormanager
             displaymanager
             gui
-            input
-            ${GTKMM_LIBRARIES}
+            inputmanager
+            ${GTKMM3_LIBRARIES}
+            ${GIOMM2_4_LIBRARIES}
+            ${GLIBMM2_4_LIBRARIES}
+            ${GLIBMM2_4_LIBRARIES}-2.4
             ${SDL2_LIBRARIES}
             ${SDL2_IMAGE_LIBRARIES}
             ${GLEW_LIBRARIES}
             ${GIF_LIBRARIES}
             OpenGL::GL
+            OpenGL::GLU
+            ${CMAKE_THREAD_LIBS_INIT}
+            dl
+            gmodule-2.0
+            gobject-2.0
+            glib-2.0
     )
-
+    
+    # Créer un exécutable séparé pour le test Wayland
+    if(WAYLAND_CLIENT_FOUND)
+        add_executable(test_wayland_shortcuts 
+            test_wayland_shortcuts.cpp
+        )
+        
+        target_include_directories(test_wayland_shortcuts
+            PRIVATE
+                ${CMAKE_SOURCE_DIR}/include
+                ${GTKMM3_INCLUDE_DIRS}
+                ${GIOMM2_4_INCLUDE_DIRS}
+                ${GLIBMM2_4_INCLUDE_DIRS}
+                ${GLIB2_INCLUDE_DIRS}
+        )
+        
+        target_link_libraries(test_wayland_shortcuts
+            PRIVATE
+                inputmanager
+                displaymanager
+                ${GTKMM3_LIBRARIES}
+                ${GIOMM2_4_LIBRARIES}
+                ${GLIBMM2_4_LIBRARIES}
+                ${WAYLAND_CLIENT_LIBRARIES}
+                ${WAYLAND_EGL_LIBRARIES}
+                ${WAYLAND_CURSOR_LIBRARIES}
+                ${XKBCOMMON_LIBRARIES}
+                dl
+                gtk-3
+                gdk-3
+                gio-2.0
+                gobject-2.0
+                glib-2.0
+        )
+        
+        # Installer l'exécutable de test
+        install(TARGETS test_wayland_shortcuts
+            RUNTIME DESTINATION bin
+        )
+    endif()
     # Activer la couverture de code si demandé
     if(ENABLE_COVERAGE)
         target_compile_options(${PROJECT_NAME}-tests

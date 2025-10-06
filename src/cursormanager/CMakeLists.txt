@@ -16,18 +16,44 @@ target_include_directories(cursormanager PUBLIC
     ${SDL2_INCLUDE_DIRS}
     ${OPENGL_INCLUDE_DIRS}
     ${GLEW_INCLUDE_DIRS}
+    ${GLEW_INCLUDE_DIRS}/..  # Pour inclure le répertoire parent de GLEW
     ${X11_INCLUDE_DIRS}
+    ${X11_INCLUDE_DIR}  # Ajout du répertoire d'inclusion X11
+    ${CAIROMM_INCLUDE_DIRS}
+    ${GTKMM3_INCLUDE_DIRS}
+    ${GDKMM3_INCLUDE_DIRS}
+    ${GLIBMM2_4_INCLUDE_DIRS}
 )
 
 # Lier les dépendances
+# Ajouter les répertoires de bibliothèques
+target_link_directories(cursormanager PRIVATE
+    ${GTKMM3_LIBRARY_DIRS}
+    ${CAIROMM_LIBRARY_DIRS}
+    ${GDKMM3_LIBRARY_DIRS}
+    ${GLIBMM2_4_LIBRARY_DIRS}
+    ${SIGC2_LIBRARY_DIRS}
+)
+
+# Lier les bibliothèques
 target_link_libraries(cursormanager PRIVATE
     ${SDL2_LIBRARIES}
     ${SDL2_IMAGE_LIBRARIES}
     ${OPENGL_LIBRARIES}
     ${GLEW_LIBRARIES}
+    ${GLEW_LIBRARY}  # Lien direct vers la bibliothèque GLEW
     ${GIF_LIBRARIES}
     ${X11_LIBRARIES}
-    ${GTKMM_LIBRARIES}
+    ${X11_X11_LIB}  # Lien direct vers X11
+    ${X11_Xfixes_LIB}  # Pour XFixes
+    ${X11_Xcursor_LIB}  # Pour Xcursor
+    ${GTKMM3_LIBRARIES}
+    ${CAIROMM_LIBRARIES}
+    ${GDKMM3_LIBRARIES}
+    ${GLIBMM2_4_LIBRARIES}
+    ${SIGC2_LIBRARIES}
+    dl  # Pour dlopen, dlsym, etc.
+    pthread  # Pour le support des threads POSIX
 )
 
 # Installation de la bibliothèque

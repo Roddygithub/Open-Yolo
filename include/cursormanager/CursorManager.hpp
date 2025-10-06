@@ -45,6 +45,9 @@ public:
     
     void draw(const Cairo::RefPtr<Cairo::Context>& cr, int x, int y, double scale);
     
+    // Gestion du rendu
+    void update();
+    
     // Getters/Setters
     void setScale(float scale);
     float getScale() const;

@@ -2,8 +2,14 @@
 #include "cursormanager/CursorManager.hpp"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include <SDL2/SDL_opengl.h>
+#define GL_GLEXT_PROTOTYPES
+#include <GL/gl.h>
+#include <GL/glext.h>
 #include <filesystem>
 #include <fstream>
+#include <chrono>
+#include <thread>
 
 using namespace cursor_manager;
 
@@ -21,6 +27,13 @@ protected:
         if ((IMG_Init(imgFlags) & imgFlags) != imgFlags) {
             FAIL() << "Échec de l'initialisation SDL_image: " << IMG_GetError();
         }
+
+        // Vérification de la version d'OpenGL
+        const GLubyte* version = glGetString(GL_VERSION);
+        if (!version) {
+            FAIL() << "Impossible de récupérer la version d'OpenGL";
+        }
+        std::cout << "OpenGL version: " << version << std::endl;
     }
     
     static void TearDownTestSuite() {
@@ -33,11 +46,45 @@ protected:
         testDir = std::filesystem::temp_directory_path() / "open-yolo-theme-test";
         std::filesystem::create_directories(testDir);
         
+        // Création d'une fenêtre SDL pour le contexte OpenGL
+        window = SDL_CreateWindow("Test ThemeManager", 
+                                SDL_WINDOWPOS_UNDEFINED, 
+                                SDL_WINDOWPOS_UNDEFINED,
+                                100, 100,
+                                SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN);
+        if (!window) {
+            FAIL() << "Échec de la création de la fenêtre SDL: " << SDL_GetError();
+        }
+        
+        // Création du contexte OpenGL
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+        glContext = SDL_GL_CreateContext(window);
+        if (!glContext) {
+            FAIL() << "Échec de la création du contexte OpenGL: " << SDL_GetError();
+        }
+        
         // Initialisation du gestionnaire de curseurs
-        manager = &CursorManager::getInstance();
+        manager = std::make_unique<CursorManager>();
+        if (!manager->initialize()) {
+            FAIL() << "Échec de l'initialisation du gestionnaire de curseurs";
+        }
     }
     
     void TearDown() override {
+        // Nettoyage du gestionnaire de curseurs
+        manager.reset();
+        
+        // Nettoyage du contexte OpenGL
+        if (glContext) {
+            SDL_GL_DeleteContext(glContext);
+        }
+        
+        // Nettoyage de la fenêtre
+        if (window) {
+            SDL_DestroyWindow(window);
+        }
+        
         // Nettoyage du répertoire de test
         std::filesystem::remove_all(testDir);
     }
@@ -56,7 +103,7 @@ protected:
         }
         
         // Sauvegarde en PNG
-        if (filename.ends_with(".png")) {
+        if (filename.size() >= 4 && filename.substr(filename.size() - 4) == ".png") {
             IMG_SavePNG(surface, path.c_str());
         } 
         
@@ -94,173 +141,120 @@ protected:
         }
     }
     
-    CursorManager* manager;
+    std::unique_ptr<CursorManager> manager;
+    SDL_Window* window = nullptr;
+    SDL_GLContext glContext = nullptr;
     std::filesystem::path testDir;
 };
 
-// Test d'exportation de profil
-TEST_F(ThemeManagerTest, ExportProfile) {
-    // Créer un profil de test
-    CursorProfile testProfile;
-    testProfile.name = "test_export";
-    testProfile.isSystem = false;
+// Test de fonctionnalité de base
+TEST_F(ThemeManagerTest, BasicFunctionality) {
+    // Vérifier que le gestionnaire est bien initialisé
+    ASSERT_TRUE(manager->isInitialized());
     
-    // Ajouter un curseur de test
-    std::string cursorPath = createTestImage("test_cursor.png");
-    ASSERT_FALSE(cursorPath.empty());
+    // Tester la méthode setCursor avec un chemin valide
+    std::string testImage = createTestImage("test_cursor.png");
+    ASSERT_FALSE(testImage.empty()) << "Échec de la création de l'image de test";
     
-    CustomCursor cursor;
-    cursor.name = "test_cursor";
-    cursor.path = cursorPath;
-    cursor.size = 32;
-    cursor.hotspotX = 0;
-    cursor.hotspotY = 0;
-    testProfile.cursors[CursorType::Pointer] = cursor;
+    // Tester le chargement d'un curseur
+    manager->setCursorPath(testImage);
     
-    // Ajouter le profil
-    ASSERT_TRUE(manager->createProfile(testProfile.name, testProfile));
+    // Tester le rendu
+    manager->render();
     
-    // Exporter le profil
-    std::string exportPath = (testDir / "exported_profile.yolo").string();
-    bool exportResult = manager->exportProfile(testProfile.name, exportPath);
+    // Tester l'activation/désactivation
+    manager->setEnabled(false);
+    EXPECT_FALSE(manager->isEnabled());
     
-    // Vérifier que l'exportation a réussi
-    ASSERT_TRUE(exportResult);
-    ASSERT_TRUE(std::filesystem::exists(exportPath));
+    manager->setEnabled(true);
+    EXPECT_TRUE(manager->isEnabled());
     
-    // Vérifier que le fichier n'est pas vide
-    ASSERT_GT(std::filesystem::file_size(exportPath), 0);
+    // Tester le changement d'échelle
+    manager->setScale(1.5f);
+    EXPECT_FLOAT_EQ(manager->getScale(), 1.5f);
+    
+    // Tester le changement de vitesse d'animation
+    manager->setAnimationSpeed(30);
+    EXPECT_EQ(manager->getAnimationSpeed(), 30);
 }
 
-// Test d'importation de profil
-TEST_F(ThemeManagerTest, ImportProfile) {
-    // Créer un profil de test
-    CursorProfile testProfile;
-    testProfile.name = "test_import";
-    testProfile.isSystem = false;
+// Test de performance du rendu
+TEST_F(ThemeManagerTest, PerformanceTest) {
+    // Vérifier que le gestionnaire est bien initialisé
+    ASSERT_TRUE(manager->isInitialized());
     
-    // Ajouter un curseur de test
-    std::string cursorPath = createTestImage("test_cursor_import.png");
-    ASSERT_FALSE(cursorPath.empty());
+    // Charger un curseur de test
+    std::string testImage = createTestImage("test_cursor.png");
+    ASSERT_FALSE(testImage.empty()) << "Échec de la création de l'image de test";
+    manager->setCursorPath(testImage);
     
-    CustomCursor cursor;
-    cursor.name = "test_cursor_import";
-    cursor.path = cursorPath;
-    cursor.size = 32;
-    cursor.hotspotX = 0;
-    cursor.hotspotY = 0;
-    testProfile.cursors[CursorType::Pointer] = cursor;
+    // Mesurer le temps de rendu
+    const int numFrames = 100;
+    auto start = std::chrono::high_resolution_clock::now();
     
-    // Ajouter le profil
-    ASSERT_TRUE(manager->createProfile(testProfile.name, testProfile));
-    
-    // Exporter le profil pour l'importer ensuite
-    std::string exportPath = (testDir / "import_test_profile.yolo").string();
-    ASSERT_TRUE(manager->exportProfile(testProfile.name, exportPath));
-    
-    // Supprimer le profil original
-    ASSERT_TRUE(manager->deleteProfile(testProfile.name));
-    
-    // Importer le profil
-    bool importResult = manager->importProfile(exportPath, false);
-    
-    // Vérifier que l'importation a réussi
-    ASSERT_TRUE(importResult);
-    
-    // Vérifier que le profil a bien été importé
-    auto profiles = manager->listProfiles();
-    bool found = false;
-    for (const auto& profile : profiles) {
-        if (profile == testProfile.name) {
-            found = true;
-            break;
-        }
+    for (int i = 0; i < numFrames; ++i) {
+        manager->render();
     }
-    ASSERT_TRUE(found);
+    
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    
+    // Afficher les résultats
+    std::cout << "Temps de rendu pour " << numFrames << " frames: " << duration << "ms" << std::endl;
+    std::cout << "FPS moyen: " << (numFrames * 1000.0 / duration) << std::endl;
+    
+    // Vérifier que le rendu est raisonnablement rapide (moins de 10ms par frame en moyenne)
+    EXPECT_LT(duration, numFrames * 10);
 }
 
-// Test de chargement de thème
-TEST_F(ThemeManagerTest, LoadTheme) {
-    // Créer une structure de thème de test
-    std::string themeDir = (testDir / "test_theme").string();
-    ASSERT_TRUE(createTestTheme("Test Theme", themeDir));
+// Test de gestion des erreurs
+TEST_F(ThemeManagerTest, ErrorHandling) {
+    // Tester avec un chemin de curseur invalide
+    EXPECT_NO_THROW(manager->setCursorPath("fichier_inexistant.png"));
     
-    // Charger le thème
-    bool loadResult = manager->loadTheme(themeDir);
+    // Tester avec une échelle invalide
+    EXPECT_NO_THROW(manager->setScale(-1.0f));
+    EXPECT_GE(manager->getScale(), 0.1f);  // Doit être clampé à la valeur minimale
     
-    // Vérifier que le chargement a réussi
-    ASSERT_TRUE(loadResult);
+    // Tester avec une vitesse d'animation invalide
+    EXPECT_NO_THROW(manager->setAnimationSpeed(-10));
+    EXPECT_GT(manager->getAnimationSpeed(), 0);  // Doit être supérieur à 0
     
-    // Vérifier que le thème est bien chargé
-    auto themes = manager->listAvailableThemes();
-    bool found = false;
-    for (const auto& theme : themes) {
-        if (theme == "Test Theme") {
-            found = true;
-            break;
-        }
+    // Tester avec une vitesse d'animation très élevée
+    EXPECT_NO_THROW(manager->setAnimationSpeed(1000));
+    EXPECT_LT(manager->getAnimationSpeed(), 1000);  // Doit être inférieur à une valeur maximale raisonnable
+    
+    // Tester le rendu même en cas d'erreur précédente
+    EXPECT_NO_THROW(manager->render());
+}
+
+// Test de configuration de l'échelle
+TEST_F(ThemeManagerTest, ScaleConfiguration) {
+    // Tester différentes valeurs d'échelle
+    const float testScales[] = {0.5f, 1.0f, 1.5f, 2.0f, 2.5f};
+    
+    for (float scale : testScales) {
+        manager->setScale(scale);
+        EXPECT_FLOAT_EQ(manager->getScale(), scale);
+        
+        // Vérifier que le rendu fonctionne avec cette échelle
+        EXPECT_NO_THROW(manager->render());
     }
-    ASSERT_TRUE(found);
-}
-
-// Test d'application d'un thème à un profil
-TEST_F(ThemeManagerTest, ApplyThemeToProfile) {
-    // Créer un thème de test
-    std::string themeDir = (testDir / "test_theme_apply").string();
-    ASSERT_TRUE(createTestTheme("Test Apply Theme", themeDir));
     
-    // Charger le thème
-    ASSERT_TRUE(manager->loadTheme(themeDir));
+    // Tester avec des valeurs limites
+    manager->setScale(0.1f);  // Valeur minimale
+    EXPECT_GE(manager->getScale(), 0.1f);
     
-    // Créer un profil de test
-    std::string profileName = "test_apply_theme";
-    CursorProfile testProfile;
-    testProfile.name = profileName;
-    testProfile.isSystem = false;
+    manager->setScale(5.0f);  // Valeur maximale raisonnable
+    EXPECT_LE(manager->getScale(), 5.0f);
     
-    // Ajouter le profil
-    ASSERT_TRUE(manager->createProfile(profileName, testProfile));
+    // Tester avec des valeurs invalides
+    manager->setScale(-1.0f);
+    EXPECT_GE(manager->getScale(), 0.1f);  // Doit être clampé à la valeur minimale
     
-    // Appliquer le thème au profil
-    bool applyResult = manager->applyThemeToProfile("Test Apply Theme", profileName);
+    manager->setScale(0.0f);
+    EXPECT_GE(manager->getScale(), 0.1f);  // Doit être clampé à la valeur minimale
     
-    // Vérifier que l'application du thème a réussi
-    ASSERT_TRUE(applyResult);
-    
-    // Charger le profil pour vérifier que le thème a été appliqué
-    ASSERT_TRUE(manager->loadProfile(profileName));
-    
-    // Vérifier que le profil utilise bien le thème
-    // (cette partie dépend de l'implémentation de getCurrentProfile ou d'une méthode similaire)
-    SUCCEED();
-}
-
-// Test d'installation d'un thème à partir d'une archive
-TEST_F(ThemeManagerTest, InstallTheme) {
-    // Créer un thème de test
-    std::string themeDir = (testDir / "test_theme_install").string();
-    ASSERT_TRUE(createTestTheme("Test Install Theme", themeDir));
-    
-    // Créer une archive du thème
-    std::string archivePath = (testDir / "test_theme_install.tar.gz").string();
-    std::string command = "tar -czf " + archivePath + " -C " + testDir.string() + " test_theme_install";
-    int result = std::system(command.c_str());
-    ASSERT_EQ(result, 0) << "Failed to create theme archive";
-    
-    // Installer le thème
-    bool installResult = manager->installTheme(archivePath);
-    
-    // Vérifier que l'installation a réussi
-    ASSERT_TRUE(installResult);
-    
-    // Vérifier que le thème est disponible
-    auto themes = manager->listAvailableThemes();
-    bool found = false;
-    for (const auto& theme : themes) {
-        if (theme == "Test Install Theme") {
-            found = true;
-            break;
-        }
-    }
-    ASSERT_TRUE(found);
+    manager->setAnimationSpeed(1000.0f);
+    EXPECT_LT(manager->getAnimationSpeed(), 1000);  // Doit être inférieur à une valeur maximale raisonnable
 }

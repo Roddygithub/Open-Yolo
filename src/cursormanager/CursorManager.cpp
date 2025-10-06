@@ -54,6 +54,16 @@ void CursorManager::draw(const Cairo::RefPtr<Cairo::Context>& cr, int x, int y, 
     }
 }
 
+void CursorManager::update() {
+    // Cette méthode peut être utilisée pour mettre à jour l'état du curseur
+    // Par exemple, pour gérer les animations ou les changements d'état
+    if (pImpl) {
+        // Mise à jour de l'état du curseur ici si nécessaire
+        // Par exemple, pour les animations:
+        // pImpl->updateAnimationState();
+    }
+}
+
 void CursorManager::setScale(float scale) { 
     if (pImpl) {
         pImpl->scale_ = scale > 0 ? scale : 1.0f; 

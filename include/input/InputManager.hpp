@@ -12,12 +12,8 @@
 #include <vector>     // Pour std::vector
 
 // GTKmm
-#include <gdkmm/device.h>
-#include <gdkmm/display.h>
-#include <gdkmm/event.h>
-#include <gdkmm/seat.h>
-#include <gdkmm/window.h>
-#include <gtkmm.h>
+#include <gdkmm.h>  // Inclut tous les en-têtes Gdkmm nécessaires
+#include <gtkmm.h>   // Inclut tous les en-têtes Gtkmm nécessaires
 
 // Project headers
 #include "InputBackend.hpp"
@@ -25,6 +21,10 @@
 // Forward declarations
 namespace cursor_manager {
     class CursorManager;
+}
+
+namespace displaymanager {
+    class DisplayManager;
 }
 
 namespace input {
@@ -51,7 +51,9 @@ public:
             : accelerator(accel), accelKey(key), mods(modifiers), callback(cb) {}
     };
     
-    InputManager();
+    // Constructeurs et destructeur
+    InputManager() : InputManager(nullptr) {}
+    explicit InputManager(std::shared_ptr<displaymanager::DisplayManager> displayManager);
     ~InputManager();
     
     /**
@@ -98,27 +100,27 @@ private:
     bool checkForDeviceChanges(); // Vérification périodique des périphériques
     void onDeviceRemoved(const Glib::RefPtr<Gdk::Device>& device); // Gestion de la suppression d'un périphérique
     
-    // Données membres
-    Glib::RefPtr<Gdk::Display> display_;
-    Glib::RefPtr<Gdk::DeviceManager> deviceManager_;
+    // Références aux composants
+    Gtk::Window* mainWindow_ = nullptr;
+    std::shared_ptr<cursor_manager::CursorManager> cursorManager_;
+    std::shared_ptr<displaymanager::DisplayManager> displayManager_;
     
     // Gestion des périphériques
+    Glib::RefPtr<Gdk::Display> display_;
+    Glib::RefPtr<Gdk::DeviceManager> deviceManager_;
     std::set<Glib::RefPtr<Gdk::Device>> keyboardDevices_;
-    std::mutex devicesMutex_;
     
     // Gestion des raccourcis
     std::map<std::string, Shortcut> shortcuts_;
+    
+    // Backend d'entrée
+    std::unique_ptr<InputBackend> backend_;
+    
+    // Synchronisation
+    mutable std::mutex mutex_;
     mutable std::mutex shortcutsMutex_;
-    
-    // Références aux autres composants
-    Gtk::Window* mainWindow_ = nullptr;
-    std::shared_ptr<cursor_manager::CursorManager> cursorManager_;
-    
-    // Backend d'entrée (X11 ou Wayland)
-    InputBackend* backend_ = nullptr;
     
     // Constantes
     static constexpr const char* LOG_DOMAIN = "InputManager";
 };
-
 } // namespace input

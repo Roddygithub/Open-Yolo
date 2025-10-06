@@ -1,9 +1,60 @@
-#include "input/ShortcutManager.hpp"
-#include <X11/XKBlib.h>
-#include <X11/extensions/XInput2.h>
-#include <iostream>
-#include <cstring>
+// 1. Inclure d'abord les en-têtes standards C++
 #include <algorithm>
+#include <cstring>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+
+// 2. Désactiver les avertissements de dépréciation pour GTK/GLib
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
+// 3. Inclure les en-têtes GTK/GTKmm (toujours avant X11)
+#include <gdkmm.h>
+#include <gtkmm.h>
+
+// 4. Réactiver les avertissements
+#pragma GCC diagnostic pop
+
+// 5. Définir _XOPEN_SOURCE pour X11
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 700
+#endif
+
+// 6. Sauvegarder les macros X11 problématiques
+#pragma push_macro("None")
+#pragma push_macro("Bool")
+#pragma push_macro("Status")
+#pragma push_macro("True")
+#pragma push_macro("False")
+
+// 7. Désactiver les avertissements pour X11
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
+// 8. Inclure les en-têtes X11 dans un bloc extern "C"
+extern "C" {
+    #undef None
+    #undef Bool
+    #undef Status
+    #undef True
+    #undef False
+    #define X_DISPLAY_MISSING
+    #include <X11/Xlib.h>
+    #include <X11/Xutil.h>
+    #include <X11/XKBlib.h>
+    #include <X11/extensions/XInput2.h>
+}
+
+// 9. Définir des types compatibles
+using XBool = int;
+using XStatus = int;
+
+// 10. Réactiver les avertissements
+#pragma GCC diagnostic pop
+
+// 11. En-têtes du projet
+#include "input/ShortcutManager.hpp"
 
 namespace input {
 
@@ -51,7 +102,7 @@ bool ShortcutManager::initialize() {
     XISetMask(mask, XI_KeyRelease);
     
     XISelectEvents(m_display, DefaultRootWindow(m_display), &event_mask, 1);
-    XSync(m_display, False);
+    XSync(m_display, false);
     
     // Initialiser les états des touches
     m_keyStates.resize(256, false);
@@ -228,5 +279,12 @@ void ShortcutManager::updateKeyStates() {
         }
     }
 }
+
+// 12. Restaurer les définitions de macros X11
+#pragma pop_macro("False")
+#pragma pop_macro("True")
+#pragma pop_macro("Status")
+#pragma pop_macro("Bool")
+#pragma pop_macro("None")
 
 } // namespace input

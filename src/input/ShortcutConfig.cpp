@@ -1,9 +1,51 @@
-#include "input/ShortcutConfig.hpp"
-#include "input/KeyCodes.hpp"
+// 1. Inclure d'abord les en-têtes standards C++
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <map>
+#include <string>
+
+// 2. Désactiver les avertissements de dépréciation pour GTK/GLib
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
+// 3. Inclure les en-têtes GTK/GTKmm (toujours avant X11)
+#include <gdkmm.h>
+#include <gtkmm.h>
+
+// 4. Réactiver les avertissements
+#pragma GCC diagnostic pop
+
+// 5. Sauvegarder les macros X11 problématiques
+#pragma push_macro("None")
+#pragma push_macro("Bool")
+#pragma push_macro("Status")
+#pragma push_macro("True")
+#pragma push_macro("False")
+
+// 6. Désactiver les avertissements pour X11
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
+// 7. Inclure les en-têtes X11 dans un bloc extern "C"
+extern "C" {
+    #undef None
+    #undef Bool
+    #undef Status
+    #undef True
+    #undef False
+    #define X_DISPLAY_MISSING
+    #include <X11/Xlib.h>
+    #include <X11/keysym.h>
+}
+
+// 8. Réactiver les avertissements
+#pragma GCC diagnostic pop
+
+// 9. Inclure les en-têtes du projet et autres bibliothèques
+#include "input/ShortcutConfig.hpp"
+#include "input/KeyCodes.hpp"
 #include <nlohmann/json.hpp>
 
 namespace input {
@@ -236,5 +278,12 @@ void ShortcutConfig::loadDefaultShortcuts() {
         {"set_theme_9", {Key::Ctrl, Key::Alt, Key::Num9}}
     };
 }
+
+// 10. Restaurer les définitions de macros X11
+#pragma pop_macro("False")
+#pragma pop_macro("True")
+#pragma pop_macro("Status")
+#pragma pop_macro("Bool")
+#pragma pop_macro("None")
 
 } // namespace input
