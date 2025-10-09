@@ -1,0 +1,118 @@
+#!/bin/bash
+
+# Options par défaut
+BUILD_TYPE="Debug"
+ENABLE_TESTS="ON"
+ENABLE_COVERAGE="OFF"
+ENABLE_ASAN="OFF"
+ENABLE_UBSAN="OFF"
+ENABLE_LTO="OFF"
+INSTALL_PREFIX="/usr/local"
+BUILD_DIR="build"
+
+# Afficher l'aide
+show_help() {
+    echo "Utilisation: $0 [options]"
+    echo "Options:"
+    echo "  -h, --help            Afficher cette aide"
+    echo "  -r, --release         Mode Release (par défaut: Debug)"
+    echo "  -t, --tests           Activer les tests (ON/OFF, par défaut: ON)"
+    echo "  -c, --coverage        Activer la couverture de code (par défaut: OFF)"
+    echo "  -a, --asan            Activer AddressSanitizer (par défaut: OFF)"
+    echo "  -u, --ubsan           Activer UndefinedBehaviorSanitizer (par défaut: OFF)"
+    echo "  -l, --lto             Activer Link Time Optimization (par défaut: OFF)"
+    echo "  -p, --prefix DIR      Préfixe d'installation (par défaut: /usr/local)"
+    echo "  -b, --build-dir DIR   Répertoire de build (par défaut: build)"
+    exit 0
+}
+
+# Parser les arguments
+while [[ $# -gt 0 ]]; do
+    key="$1"
+    case $key in
+        -h|--help)
+            show_help
+            ;;
+        -r|--release)
+            BUILD_TYPE="Release"
+            shift
+            ;;
+        -t|--tests)
+            ENABLE_TESTS="$2"
+            shift 2
+            ;;
+        -c|--coverage)
+            ENABLE_COVERAGE="ON"
+            shift
+            ;;
+        -a|--asan)
+            ENABLE_ASAN="ON"
+            shift
+            ;;
+        -u|--ubsan)
+            ENABLE_UBSAN="ON"
+            shift
+            ;;
+        -l|--lto)
+            ENABLE_LTO="ON"
+            shift
+            ;;
+        -p|--prefix)
+            INSTALL_PREFIX="$2"
+            shift 2
+            ;;
+        -b|--build-dir)
+            BUILD_DIR="$2"
+            shift 2
+            ;;
+        *)
+            echo "Option non reconnue: $1"
+            show_help
+            exit 1
+            ;;
+    esac
+done
+
+echo "=== Configuration de la construction ==="
+echo "Type de build: $BUILD_TYPE"
+echo "Tests: $ENABLE_TESTS"
+echo "Couverture: $ENABLE_COVERAGE"
+echo "ASan: $ENABLE_ASAN"
+echo "UBSan: $ENABLE_UBSAN"
+echo "LTO: $ENABLE_LTO"
+echo "Préfixe d'installation: $INSTALL_PREFIX"
+echo "Répertoire de build: $BUILD_DIR"
+
+# Créer le répertoire de build
+mkdir -p "$BUILD_DIR"
+cd "$BUILD_DIR" || exit 1
+
+# Configurer CMake
+cmake .. \
+    -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+    -DENABLE_LOGGING=ON \
+    -DBUILD_TESTS="$ENABLE_TESTS" \
+    -DENABLE_COVERAGE="$ENABLE_COVERAGE" \
+    -DENABLE_ASAN="$ENABLE_ASAN" \
+    -DENABLE_UBSAN="$ENABLE_UBSAN" \
+    -DENABLE_LTO="$ENABLE_LTO" \
+    -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX"
+
+# Compiler le projet
+echo "=== Compilation en cours... ==="
+if ! make -j$(nproc); then
+    echo "Erreur lors de la compilation"
+    exit 1
+fi
+
+echo "=== Construction terminée avec succès ==="
+echo "Le binaire se trouve dans: $PWD/bin/"
+
+# Si la couverture est activée, générer le rapport
+if [ "$ENABLE_COVERAGE" = "ON" ] && [ "$ENABLE_TESTS" = "ON" ]; then
+    echo "Génération du rapport de couverture..."
+    ctest --output-on-failure
+    make coverage
+    echo "Rapport de couverture disponible dans: $PWD/coverage/index.html"
+fi

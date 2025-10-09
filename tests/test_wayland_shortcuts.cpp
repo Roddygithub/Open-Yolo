@@ -1,15 +1,17 @@
-#include <gtkmm/application.h>
-#include <gtkmm/window.h>
-#include <gtkmm/button.h>
-#include <gtkmm/box.h>
-#include <gtkmm/label.h>
-#include <gdk/gdkwayland.h>
 #include <gdk/gdk.h>
+#include <gdk/gdkwayland.h>
+#include <gtkmm/application.h>
+#include <gtkmm/box.h>
+#include <gtkmm/button.h>
+#include <gtkmm/label.h>
+#include <gtkmm/window.h>
+
 #include <iostream>
 #include <memory>
+
+#include "input/ErrorCodes.hpp"
 #include "input/InputManager.hpp"
 #include "input/backends/WaylandBackend.hpp"
-#include "input/ErrorCodes.hpp"
 
 using namespace input;
 
@@ -38,18 +40,20 @@ public:
         try {
             // Créer le gestionnaire d'entrée avec un DisplayManager nul pour les tests
             m_input_manager = std::make_unique<InputManager>(nullptr);
-            
+
             // Configurer l'intégration GTK avec la fenêtre actuelle
             m_input_manager->setupGTKIntegration(this, nullptr);
-            
+
             // Enregistrement des raccourcis de test
             register_test_shortcuts();
-            
-            m_status_label.set_text("Raccourcis enregistrés. Essayez :\nCtrl+Alt+1, Ctrl+Alt+2, Ctrl+Alt+3");
-            
+
+            m_status_label.set_text(
+                "Raccourcis enregistrés. Essayez :\nCtrl+Alt+1, Ctrl+Alt+2, Ctrl+Alt+3");
+
         } catch (const std::exception& e) {
             std::cerr << "Erreur d'initialisation : " << e.what() << std::endl;
-            m_status_label.set_text("Erreur d'initialisation. Voir la console pour plus de détails.");
+            m_status_label.set_text(
+                "Erreur d'initialisation. Voir la console pour plus de détails.");
         }
 
         show_all_children();
@@ -59,7 +63,8 @@ public:
 
 private:
     void register_test_shortcuts() {
-        if (!m_input_manager) return;
+        if (!m_input_manager)
+            return;
 
         // Raccourci 1
         m_input_manager->registerShortcut("test1", "<Ctrl><Alt>1", [this]() {
@@ -88,14 +93,14 @@ private:
 
 int main(int argc, char* argv[]) {
     auto app = Gtk::Application::create(argc, argv, "org.openyolo.test.wayland_shortcuts");
-    
+
     // Vérifier si nous sommes sous Wayland
     auto display = gdk_display_get_default();
     if (!GDK_IS_WAYLAND_DISPLAY(display)) {
         std::cerr << "Ce test nécessite un environnement Wayland." << std::endl;
         return 1;
     }
-    
+
     TestWindow window;
     return app->run(window);
 }

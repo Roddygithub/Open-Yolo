@@ -4,32 +4,32 @@
 # Ce script doit être exécuté sur un système Linux avec Docker et Docker Compose installés
 
 # Vérifier que Docker est installé
-if ! command -v docker &> /dev/null; then
-    echo "Erreur : Docker n'est pas installé. Veuillez installer Docker avant de continuer."
-    echo "Voir https://docs.docker.com/engine/install/ pour les instructions d'installation."
-    exit 1
+if ! command -v docker &>/dev/null; then
+  echo "Erreur : Docker n'est pas installé. Veuillez installer Docker avant de continuer."
+  echo "Voir https://docs.docker.com/engine/install/ pour les instructions d'installation."
+  exit 1
 fi
 
 # Vérifier que Docker Compose est installé
-if ! command -v docker-compose &> /dev/null; then
-    echo "Erreur : Docker Compose n'est pas installé. Veuillez installer Docker Compose avant de continuer."
-    echo "Voir https://docs.docker.com/compose/install/ pour les instructions d'installation."
-    exit 1
+if ! command -v docker-compose &>/dev/null; then
+  echo "Erreur : Docker Compose n'est pas installé. Veuillez installer Docker Compose avant de continuer."
+  echo "Voir https://docs.docker.com/compose/install/ pour les instructions d'installation."
+  exit 1
 fi
 
 # Vérifier que l'utilisateur est dans le groupe docker
 if ! groups | grep -q "\bdocker\b"; then
-    echo "Attention : Votre utilisateur n'est pas dans le groupe 'docker'."
-    echo "Pour ajouter votre utilisateur au groupe docker, exécutez :"
-    echo "  sudo usermod -aG docker $USER"
-    echo "Puis déconnectez-vous et reconnectez-vous pour que les changements prennent effet."
-    exit 1
+  echo "Attention : Votre utilisateur n'est pas dans le groupe 'docker'."
+  echo "Pour ajouter votre utilisateur au groupe docker, exécutez :"
+  echo "  sudo usermod -aG docker $USER"
+  echo "Puis déconnectez-vous et reconnectez-vous pour que les changements prennent effet."
+  exit 1
 fi
 
 # Vérifier que le répertoire du projet est correct
 if [ ! -f "docker-compose.yml" ]; then
-    echo "Erreur : Ce script doit être exécuté depuis le répertoire racine du projet OpenYolo."
-    exit 1
+  echo "Erreur : Ce script doit être exécuté depuis le répertoire racine du projet OpenYolo."
+  exit 1
 fi
 
 # Créer les répertoires nécessaires

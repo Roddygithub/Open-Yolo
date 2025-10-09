@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
-#include "minimal_build/ProfileManager.hpp"
+
 #include <fstream>
+
+#include "minimal_build/ProfileManager.hpp"
 
 class ProfileManagerTest : public ::testing::Test {
 protected:
@@ -29,7 +31,7 @@ TEST_F(ProfileManagerTest, CreateAndSaveProfile) {
 TEST_F(ProfileManagerTest, ExportAndImportProfile) {
     ASSERT_TRUE(profileManager.loadProfiles());
     ASSERT_TRUE(profileManager.createProfile("ExportTest"));
-    
+
     // Export the profile
     ASSERT_FALSE(profileManager.exportProfile("ExportTest", "exported_profile.json"));
 
@@ -39,11 +41,11 @@ TEST_F(ProfileManagerTest, ExportAndImportProfile) {
     // Check if the imported profile exists
     const auto& profiles = profileManager.getProfiles();
     auto it = std::find_if(profiles.begin(), profiles.end(),
-        [](const openyolo::CursorProfile& p) { return p.name == "ExportTest"; });
+                           [](const openyolo::CursorProfile& p) { return p.name == "ExportTest"; });
     ASSERT_NE(it, profiles.end());
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

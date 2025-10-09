@@ -1,0 +1,75 @@
+
+# Git
+.git/
+.gitignore
+.gitmodules
+.gitattributes
+
+# Build directories
+build/
+build-*/
+minimal_build/
+dist/
+*.egg-info/
+
+# Caching
+.ccache/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# Local files
+cmake-installer.msi
+openyolo_full_fix.patch
+
+# Distribution / packaging
+.Python
+env/
+venv/
+ENV/
+*.egg
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Documentation
+/docs/_build/
+
+# IDE specific files
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

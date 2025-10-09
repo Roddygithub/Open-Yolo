@@ -21,6 +21,7 @@ RUN pacman -Syu --noconfirm && \
     gtest \
     xorg-server-xvfb \
     xorg-xauth \
+    nlohmann-json \
     && pacman -Scc --noconfirm
 
 WORKDIR /workspace

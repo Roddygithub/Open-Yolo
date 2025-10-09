@@ -11,19 +11,19 @@ enum class ErrorCode {
     Success = 0,
     InvalidArgument,
     OperationNotPermitted,
-    
+
     // Erreurs de thème (100-199)
     ThemeNotFound = 100,
     ThemeInvalidFormat,
     ThemeInstallFailed,
     ThemeLoadFailed,
-    
+
     // Erreurs de profil (200-299)
     ProfileNotFound = 200,
     ProfileCorrupted,
     ProfileSaveFailed,
     ProfileLoadFailed,
-    
+
     // Erreurs système (300-399)
     FileNotFound = 300,
     PermissionDenied,
@@ -36,7 +36,7 @@ public:
     static const ErrorCategory& instance();
     const char* name() const noexcept override;
     std::string message(int ev) const override;
-    
+
 private:
     ErrorCategory() = default;
 };
@@ -44,11 +44,11 @@ private:
 std::error_code make_error_code(ErrorCode e);
 std::error_condition make_error_condition(ErrorCode e);
 
-} // namespace error
-} // namespace openyolo
+}  // namespace error
+}  // namespace openyolo
 
 // Spécialisation de std::is_error_code_enum pour ErrorCode
 namespace std {
-    template<>
-    struct is_error_code_enum<openyolo::error::ErrorCode> : public true_type {};
-}
+template <>
+struct is_error_code_enum<openyolo::error::ErrorCode> : public true_type {};
+}  // namespace std

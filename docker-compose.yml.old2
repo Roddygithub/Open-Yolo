@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  openyolo:
+    build: .
+    container_name: openyolo
+    environment:
+      - DISPLAY=${DISPLAY}
+      - XAUTHORITY=/tmp/.docker.xauth
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ${XAUTHORITY}:/tmp/.docker.xauth:ro
+      - ${HOME}/.Xauthority:/root/.Xauthority:ro
+    devices:
+      - /dev/input
+    privileged: true
+    network_mode: host

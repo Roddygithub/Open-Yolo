@@ -1,0 +1,28 @@
+FROM ubuntu:22.04
+
+# Mettre à jour et installer les dépendances nécessaires
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    clang-format \
+    shfmt \
+    python3-pip \
+    python3-venv \
+    && rm -rf /var/lib/apt/lists/*
+
+# Installer black pour le formatage Python
+RUN pip3 install --no-cache-dir black==22.3.0
+
+# Créer un utilisateur non-root
+RUN useradd -m -u 1000 -s /bin/sh developer
+
+# Définir le répertoire de travail
+WORKDIR /workspace
+
+# Copier le script de formatage
+COPY format.sh /usr/local/bin/format.sh
+RUN chmod +x /usr/local/bin/format.sh
+
+# Définir l'utilisateur non-root
+USER developer
+
+# Commande par défaut
+ENTRYPOINT ["/usr/local/bin/format.sh"]

@@ -7,66 +7,120 @@
   },
   "configurePresets": [
     {
-      "name": "dev",
-      "displayName": "Development",
-      "description": "Configure for development with debug symbols and tests",
-      "binaryDir": "${sourceDir}/build",
-      "generator": "Unix Makefiles",
+      "name": "linux-debug",
+      "displayName": "Linux Debug",
+      "description": "Debug build for Linux",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "ENABLE_TESTS": "ON",
+        "BUILD_TESTING": "ON",
         "ENABLE_COVERAGE": "ON",
-        "BUILD_SHARED_LIBS": "ON"
+        "ENABLE_ASAN": "OFF",
+        "ENABLE_UBSAN": "OFF"
       },
       "environment": {
-        "CC": "clang-14",
-        "CXX": "clang++-14",
-        "CXXFLAGS": "-Wall -Wextra -Wpedantic -fno-omit-frame-pointer"
+        "CC": "gcc",
+        "CXX": "g++"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "hostOS": ["Linux"]
+        }
       }
     },
     {
-      "name": "release",
-      "displayName": "Release",
-      "description": "Configure for release with optimizations",
+      "name": "linux-release",
+      "displayName": "Linux Release",
+      "description": "Release build for Linux",
+      "generator": "Ninja",
       "binaryDir": "${sourceDir}/build-release",
-      "generator": "Unix Makefiles",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "ENABLE_TESTS": "OFF",
-        "ENABLE_COVERAGE": "OFF",
-        "BUILD_SHARED_LIBS": "ON"
+        "BUILD_TESTING": "OFF",
+        "ENABLE_LTO": "ON"
       },
       "environment": {
-        "CC": "clang-14",
-        "CXX": "clang++-14",
-        "CXXFLAGS": "-O3 -DNDEBUG -march=native"
+        "CC": "gcc",
+        "CXX": "g++"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "hostOS": ["Linux"]
+        }
+      }
+    },
+    {
+      "name": "linux-clang-debug",
+      "displayName": "Linux Clang Debug",
+      "description": "Debug build for Linux with Clang",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-clang-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "BUILD_TESTING": "ON",
+        "ENABLE_ASAN": "ON",
+        "ENABLE_UBSAN": "ON"
+      },
+      "environment": {
+        "CC": "clang",
+        "CXX": "clang++",
+        "CFLAGS": "-fcolor-diagnostics",
+        "CXXFLAGS": "-fcolor-diagnostics"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "hostOS": ["Linux"]
+        }
       }
     }
   ],
   "buildPresets": [
     {
-      "name": "dev",
-      "configurePreset": "dev",
+      "name": "debug",
+      "configurePreset": "linux-debug",
       "configuration": "Debug",
-      "jobs": 0
+      "targets": ["all", "test"]
     },
     {
       "name": "release",
-      "configurePreset": "release",
+      "configurePreset": "linux-release",
       "configuration": "Release",
-      "jobs": 0
+      "targets": ["all", "package"]
+    },
+    {
+      "name": "clang-debug",
+      "configurePreset": "linux-clang-debug",
+      "configuration": "Debug",
+      "targets": ["all", "test"]
     }
   ],
   "testPresets": [
     {
-      "name": "unit-tests",
-      "configurePreset": "dev",
+      "name": "test-debug",
+      "configurePreset": "linux-debug",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "test-clang-debug",
+      "configurePreset": "linux-clang-debug",
       "configuration": "Debug",
       "output": {
         "outputOnFailure": true
       }
     }
-  ]
+  ],
+  "vendor": {
+    "microsoft.com/VisualStudioSettings/CMake/1.0": {
+      "autoReload": {
+        "enabled": true
+      }
+    }
+  }
 }

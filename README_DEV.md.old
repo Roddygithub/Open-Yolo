@@ -1,0 +1,126 @@
+# OpenYolo - Guide du Développeur
+
+## 🚀 Configuration de l'environnement de développement
+
+### Prérequis
+- Docker 20.10+
+- Docker Compose 2.0+
+- Git
+
+### Démarrer l'environnement
+
+1. **Cloner le dépôt** :
+   ```bash
+   git clone https://github.com/Roddygithub/Open-Yolo.git
+   cd Open-Yolo
+   ```
+
+2. **Démarrer les services** :
+   ```bash
+   docker-compose up -d
+   ```
+
+3. **Se connecter au conteneur de développement** :
+   ```bash
+   docker-compose exec app bash
+   ```
+
+## 🛠 Commandes utiles
+
+### Dans le conteneur
+- **Compiler le projet** :
+  ```bash
+  mkdir -p build && cd build
+  cmake .. -DCMAKE_BUILD_TYPE=Debug
+  make -j$(nproc)
+  ```
+
+- **Exécuter les tests** :
+  ```bash
+  cd /workspace
+  ./scripts/run-tests.sh
+  ```
+
+- **Nettoyer le build** :
+  ```bash
+  rm -rf build/*
+  ```
+
+## 🧪 Exécution des tests
+
+### Tous les tests
+```bash
+./scripts/run-tests.sh
+```
+
+### Un test spécifique
+```bash
+cd build
+ctest -R "nom_du_test" -V
+```
+
+## 📦 Construction des paquets
+
+### Paquet DEB (Debian/Ubuntu)
+```bash
+./scripts/build-packages.sh deb
+```
+
+### Paquet RPM (Fedora/CentOS)
+```bash
+./scripts/build-packages.sh rpm
+```
+
+## 🔄 Workflow Git
+
+1. **Créer une branche** :
+   ```bash
+   git checkout -b feature/nouvelle-fonctionnalite
+   ```
+
+2. **Valider les changements** :
+   ```bash
+   git add .
+   git commit -m "Description des modifications"
+   ```
+
+3. **Pousser les changements** :
+   ```bash
+   git push -u origin feature/nouvelle-fonctionnalite
+   ```
+
+4. **Créer une Pull Request** sur GitHub vers la branche `develop`
+
+## 🐛 Débogage
+
+### Activer les logs détaillés
+```bash
+export OPENYOLO_DEBUG=1
+./build/openyolo
+```
+
+### Utiliser GDB
+```bash
+gdb --args ./build/openyolo
+```
+
+## 📊 Couverture de code
+
+Générez un rapport de couverture avec :
+```bash
+mkdir -p build && cd build
+cmake .. -DENABLE_COVERAGE=ON
+make -j$(nproc)
+make coverage
+```
+
+Le rapport sera disponible dans `build/coverage/index.html`
+
+## 🔄 Intégration Continue
+
+La CI est configurée avec GitHub Actions et s'exécute sur :
+- Push sur `main`, `develop` ou `development`
+- Pull requests vers ces branches
+- Création d'un release
+
+Voir `.github/workflows/ci.yml` pour plus de détails.

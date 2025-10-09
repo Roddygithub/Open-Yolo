@@ -22,8 +22,8 @@ echo ""
 
 # Nettoyer les anciens builds
 if [ -d "$BUILD_DIR" ]; then
-    echo -e "${YELLOW}Cleaning old build directory...${NC}"
-    rm -rf "$BUILD_DIR"
+  echo -e "${YELLOW}Cleaning old build directory...${NC}"
+  rm -rf "$BUILD_DIR"
 fi
 
 # Créer le répertoire de packages
@@ -32,11 +32,11 @@ mkdir -p "$PACKAGES_DIR"
 # Configurer CMake
 echo -e "${BLUE}Configuring CMake...${NC}"
 cmake -B "$BUILD_DIR" \
-    -G Ninja \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DBUILD_TESTS=OFF \
-    -DENABLE_LTO=ON \
-    -DENABLE_LOGGING=OFF
+  -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DBUILD_TESTS=OFF \
+  -DENABLE_LTO=ON \
+  -DENABLE_LOGGING=OFF
 
 # Compiler
 echo -e "${BLUE}Building project...${NC}"
@@ -52,28 +52,28 @@ echo ""
 # DEB package
 echo -e "${YELLOW}Generating DEB package...${NC}"
 if cpack -G DEB; then
-    echo -e "${GREEN}✓ DEB package generated${NC}"
-    mv *.deb "$PACKAGES_DIR/" 2>/dev/null || true
+  echo -e "${GREEN}✓ DEB package generated${NC}"
+  mv *.deb "$PACKAGES_DIR/" 2>/dev/null || true
 else
-    echo -e "${RED}✗ DEB package generation failed${NC}"
+  echo -e "${RED}✗ DEB package generation failed${NC}"
 fi
 
 # RPM package
 echo -e "${YELLOW}Generating RPM package...${NC}"
 if cpack -G RPM; then
-    echo -e "${GREEN}✓ RPM package generated${NC}"
-    mv *.rpm "$PACKAGES_DIR/" 2>/dev/null || true
+  echo -e "${GREEN}✓ RPM package generated${NC}"
+  mv *.rpm "$PACKAGES_DIR/" 2>/dev/null || true
 else
-    echo -e "${RED}✗ RPM package generation failed${NC}"
+  echo -e "${RED}✗ RPM package generation failed${NC}"
 fi
 
 # TGZ package
 echo -e "${YELLOW}Generating TGZ package...${NC}"
 if cpack -G TGZ; then
-    echo -e "${GREEN}✓ TGZ package generated${NC}"
-    mv *.tar.gz "$PACKAGES_DIR/" 2>/dev/null || true
+  echo -e "${GREEN}✓ TGZ package generated${NC}"
+  mv *.tar.gz "$PACKAGES_DIR/" 2>/dev/null || true
 else
-    echo -e "${RED}✗ TGZ package generation failed${NC}"
+  echo -e "${RED}✗ TGZ package generation failed${NC}"
 fi
 
 # Copier les fichiers de packaging

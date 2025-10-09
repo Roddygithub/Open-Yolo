@@ -1,16 +1,16 @@
 #ifndef LOGGER_HPP
 #define LOGGER_HPP
 
-#include <string>
+#include <atomic>
+#include <chrono>
+#include <filesystem>
 #include <fstream>
+#include <iomanip>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <sstream>
-#include <iomanip>
-#include <chrono>
-#include <filesystem>
-#include <map>
-#include <atomic>
+#include <string>
 #include <thread>
 
 namespace fs = std::filesystem;
@@ -22,20 +22,20 @@ namespace openyolo {
  * @brief Niveaux de sévérité des messages de log
  */
 enum class LogLevel {
-    TRACE,   // Niveau le plus bas, pour le débogage détaillé
-    DEBUG,   // Informations de débogage
-    INFO,    // Informations générales
-    WARNING, // Avertissements
-    ERROR,   // Erreurs qui n'empêchent pas le fonctionnement
-    FATAL    // Erreurs critiques qui arrêtent l'application
+    TRACE,    // Niveau le plus bas, pour le débogage détaillé
+    DEBUG,    // Informations de débogage
+    INFO,     // Informations générales
+    WARNING,  // Avertissements
+    ERROR,    // Erreurs qui n'empêchent pas le fonctionnement
+    FATAL     // Erreurs critiques qui arrêtent l'application
 };
 
 /**
  * @class Logger
  * @brief Classe de gestion des logs de l'application
- * 
- * Cette classe fournit un système de journalisation thread-safe avec différents niveaux de sévérité,
- * rotation des fichiers de log et formatage personnalisable.
+ *
+ * Cette classe fournit un système de journalisation thread-safe avec différents niveaux de
+ * sévérité, rotation des fichiers de log et formatage personnalisable.
  */
 class Logger {
 public:
@@ -57,11 +57,10 @@ public:
      * @param minLevel Niveau de log minimum à enregistrer
      * @param consoleOutput Si vrai, affiche les logs dans la console
      */
-    void initialize(const fs::path& logDir = "logs", 
-                   size_t maxFileSize = 5 * 1024 * 1024, // 5 Mo par défaut
-                   size_t maxFiles = 10,
-                   LogLevel minLevel = LogLevel::INFO,
-                   bool consoleOutput = true);
+    void initialize(const fs::path& logDir = "logs",
+                    size_t maxFileSize = 5 * 1024 * 1024,  // 5 Mo par défaut
+                    size_t maxFiles = 10, LogLevel minLevel = LogLevel::INFO,
+                    bool consoleOutput = true);
 
     /**
      * @brief Définit le niveau de log minimum
@@ -83,10 +82,7 @@ public:
      * @param line Ligne source (généralement __LINE__)
      * @param function Fonction source (généralement __FUNCTION__)
      */
-    void log(LogLevel level, 
-             const std::string& message, 
-             const std::string& file = "", 
-             int line = 0, 
+    void log(LogLevel level, const std::string& message, const std::string& file = "", int line = 0,
              const std::string& function = "");
 
     /**
@@ -96,9 +92,7 @@ public:
      * @param line Ligne source
      * @param function Fonction source
      */
-    void trace(const std::string& message, 
-               const std::string& file = "", 
-               int line = 0, 
+    void trace(const std::string& message, const std::string& file = "", int line = 0,
                const std::string& function = "");
 
     /**
@@ -108,9 +102,7 @@ public:
      * @param line Ligne source
      * @param function Fonction source
      */
-    void debug(const std::string& message, 
-               const std::string& file = "", 
-               int line = 0, 
+    void debug(const std::string& message, const std::string& file = "", int line = 0,
                const std::string& function = "");
 
     /**
@@ -120,9 +112,7 @@ public:
      * @param line Ligne source
      * @param function Fonction source
      */
-    void info(const std::string& message, 
-              const std::string& file = "", 
-              int line = 0, 
+    void info(const std::string& message, const std::string& file = "", int line = 0,
               const std::string& function = "");
 
     /**
@@ -132,9 +122,7 @@ public:
      * @param line Ligne source
      * @param function Fonction source
      */
-    void warning(const std::string& message, 
-                 const std::string& file = "", 
-                 int line = 0, 
+    void warning(const std::string& message, const std::string& file = "", int line = 0,
                  const std::string& function = "");
 
     /**
@@ -144,9 +132,7 @@ public:
      * @param line Ligne source
      * @param function Fonction source
      */
-    void error(const std::string& message, 
-               const std::string& file = "", 
-               int line = 0, 
+    void error(const std::string& message, const std::string& file = "", int line = 0,
                const std::string& function = "");
 
     /**
@@ -156,9 +142,7 @@ public:
      * @param line Ligne source
      * @param function Fonction source
      */
-    void fatal(const std::string& message, 
-               const std::string& file = "", 
-               int line = 0, 
+    void fatal(const std::string& message, const std::string& file = "", int line = 0,
                const std::string& function = "");
 
     /**
@@ -216,6 +200,6 @@ private:
 #define LOG_ERROR(msg) openyolo::Logger::instance().error(msg, __FILE__, __LINE__, __FUNCTION__)
 #define LOG_FATAL(msg) openyolo::Logger::instance().fatal(msg, __FILE__, __LINE__, __FUNCTION__)
 
-} // namespace openyolo
+}  // namespace openyolo
 
-#endif // LOGGER_HPP
+#endif  // LOGGER_HPP

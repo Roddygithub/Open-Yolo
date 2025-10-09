@@ -1,23 +1,36 @@
 #include "../../include/input/InputManager.hpp"
-#include "../../include/input/backends/X11Backend.hpp"
-#include "../../include/input/backends/WaylandBackend.hpp"
+
 #include <gdk/gdk.h>
-#include <gdk/gdkx.h>
 #include <gdk/gdkwayland.h>
+#include <gdk/gdkx.h>
 #include <gtkmm.h>
+#include <X11/Xlib.h>
+
 #include <iostream>
+
+#include "../../include/input/backends/WaylandBackend.hpp"
+#include "../../include/input/backends/X11Backend.hpp"
 
 // Définition des macros de journalisation si non définies
 #ifndef LOG_DEBUG
-#define LOG_DEBUG(msg) do { std::cout << "[DEBUG] " << (msg) << std::endl; } while(0)
+#define LOG_DEBUG(msg)                                 \
+    do {                                               \
+        std::cout << "[DEBUG] " << (msg) << std::endl; \
+    } while (0)
 #endif
 
 #ifndef LOG_INFO
-#define LOG_INFO(msg) do { std::cout << "[INFO] " << (msg) << std::endl; } while(0)
+#define LOG_INFO(msg)                                 \
+    do {                                              \
+        std::cout << "[INFO] " << (msg) << std::endl; \
+    } while (0)
 #endif
 
 #ifndef LOG_ERROR
-#define LOG_ERROR(msg) do { std::cerr << "[ERROR] " << (msg) << std::endl; } while(0)
+#define LOG_ERROR(msg)                                 \
+    do {                                               \
+        std::cerr << "[ERROR] " << (msg) << std::endl; \
+    } while (0)
 #endif
 
 namespace input {
@@ -26,41 +39,71 @@ InputManager::InputManager(std::shared_ptr<displaymanager::DisplayManager> displ
     : displayManager_(displayManager),
       mainWindow_(nullptr),
       cursorManager_(nullptr),
-      m_initialized(false) {
-{{ ... }}
+      backend_(nullptr),
+      initialized_(false) {
+    // Initialisation du backend en fonction de l'environnement
+    const char* waylandDisplay = getenv("WAYLAND_DISPLAY");
+    const char* x11Display = getenv("DISPLAY");
+
+    if (waylandDisplay != nullptr) {
+        LOG_INFO("Initialisation du backend Wayland");
+        // Création du backend Wayland avec le gestionnaire d'entrée
+        backend_ = std::make_unique<WaylandBackend>(this);
+    } else if (x11Display != nullptr) {
+        LOG_INFO("Initialisation du backend X11");
+        Display* display = XOpenDisplay(nullptr);
+        if (!display) {
+            LOG_ERROR("Impossible d'ouvrir la connexion X11");
+            return;
+        }
+        backend_ = std::make_unique<X11Backend>(display);
+    } else {
+        LOG_ERROR("Impossible de déterminer l'environnement d'affichage (X11 ou Wayland)");
+        return;
     }
 
+    if (backend_) {
+        initialized_ = backend_->initialize();
+        if (!initialized_) {
+            LOG_ERROR("Échec de l'initialisation du backend d'entrée");
+            backend_.reset();
+        }
+    }
+}
+
 bool InputManager::onKeyPressed(GdkEventKey* event) {
-    if (!m_backend) {
+    if (!backend_) {
         return false;
     }
-    
+
     // Convertir l'événement GdkEventKey en code de touche et modificateurs
     guint keyval = event->keyval;
     GdkModifierType mods = static_cast<GdkModifierType>(event->state);
-    return m_backend->handleKeyEvent(keyval, mods);
+    return backend_->handleKeyEvent(keyval, mods);
 }
 
-void InputManager::setupGTKIntegration(Gtk::Window* window, std::shared_ptr<cursor_manager::CursorManager> cursorManager) {
+void InputManager::setupGTKIntegration(
+    Gtk::Window* window, std::shared_ptr<cursor_manager::CursorManager> cursorManager) {
     if (!window) {
         LOG_ERROR("Erreur: la fenêtre GTK est nulle");
         return;
     }
-    
+
     // Enregistrer la fenêtre principale
     mainWindow_ = window;
-    
+
     // Enregistrer le gestionnaire de curseur
     cursorManager_ = cursorManager;
-    
+
     // Configurer les signaux de la fenêtre principale
-    window->signal_key_press_event().connect(
-        sigc::mem_fun(*this, &InputManager::onKeyPressed), false);
-    
+    window->signal_key_press_event().connect(sigc::mem_fun(*this, &InputManager::onKeyPressed),
+                                             false);
+
     LOG_INFO("Intégration GTK configurée avec succès");
 }
 
-bool InputManager::parseAccelerator(const std::string& accel, guint& key, Gdk::ModifierType& mods) const {
+bool InputManager::parseAccelerator(const std::string& accel, guint& key,
+                                    Gdk::ModifierType& mods) const {
     if (accel.empty()) {
         LOG_ERROR("Accelerator string is empty");
         return false;
@@ -110,4 +153,4 @@ bool InputManager::parseAccelerator(const std::string& accel, guint& key, Gdk::M
     }
 }
 
-} // namespace input
+}  // namespace input

@@ -1,27 +1,17 @@
 #!/bin/bash
 
-# Créer le répertoire de build s'il n'existe pas
-mkdir -p build
+# Configuration
+BUILD_DIR="build"
+BUILD_TYPE="Release"
 
-# Se déplacer dans le répertoire de build
-cd build
+# Création du répertoire de build
+mkdir -p "${BUILD_DIR}"
 
-# Configurer CMake
-echo "Configuration de CMake..."
-cmake -DCMAKE_BUILD_TYPE=Debug \
-      -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-      -DENABLE_LOGGING=ON \
-      -DBUILD_TESTS=ON \
-      -DENABLE_COVERAGE=OFF \
-      -DCMAKE_INSTALL_PREFIX=/usr/local \
-      ..
+# Configuration avec CMake
+cmake -S . -B "${BUILD_DIR}" \
+  -G "Ninja" \
+  -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-# Compiler le projet
-echo "Compilation en cours..."
-make -j$(nproc)
-
-# Installer le projet (optionnel)
-# echo "Installation..."
-# sudo make install
-
-echo "Construction terminée avec succès !"
+# Construction
+cmake --build "${BUILD_DIR}" --config "${BUILD_TYPE}"

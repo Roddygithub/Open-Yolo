@@ -24,12 +24,13 @@
 #ifndef INPUT_INHIBIT_UNSTABLE_V1_CLIENT_PROTOCOL_H
 #define INPUT_INHIBIT_UNSTABLE_V1_CLIENT_PROTOCOL_H
 
-#ifdef  __cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
+
 #include "wayland-client.h"
 
 #define WL_HIDE_DEPRECATED
@@ -85,23 +86,20 @@ extern const struct wl_interface zwp_input_inhibitor_v1_interface;
 #define ZWP_INPUT_INHIBIT_MANAGER_V1_GET_INHIBITOR_SINCE_VERSION 1
 
 /** @ingroup iface_zwp_input_inhibit_manager_v1 */
-static inline void
-zwp_input_inhibit_manager_v1_set_user_data(struct zwp_input_inhibit_manager_v1 *zwp_input_inhibit_manager_v1, void *user_data)
-{
-	wl_proxy_set_user_data((struct wl_proxy *) zwp_input_inhibit_manager_v1, user_data);
+static inline void zwp_input_inhibit_manager_v1_set_user_data(
+    struct zwp_input_inhibit_manager_v1* zwp_input_inhibit_manager_v1, void* user_data) {
+    wl_proxy_set_user_data((struct wl_proxy*)zwp_input_inhibit_manager_v1, user_data);
 }
 
 /** @ingroup iface_zwp_input_inhibit_manager_v1 */
-static inline void *
-zwp_input_inhibit_manager_v1_get_user_data(struct zwp_input_inhibit_manager_v1 *zwp_input_inhibit_manager_v1)
-{
-	return wl_proxy_get_user_data((struct wl_proxy *) zwp_input_inhibit_manager_v1);
+static inline void* zwp_input_inhibit_manager_v1_get_user_data(
+    struct zwp_input_inhibit_manager_v1* zwp_input_inhibit_manager_v1) {
+    return wl_proxy_get_user_data((struct wl_proxy*)zwp_input_inhibit_manager_v1);
 }
 
-static inline uint32_t
-zwp_input_inhibit_manager_v1_get_version(struct zwp_input_inhibit_manager_v1 *zwp_input_inhibit_manager_v1)
-{
-	return wl_proxy_get_version((struct wl_proxy *) zwp_input_inhibit_manager_v1);
+static inline uint32_t zwp_input_inhibit_manager_v1_get_version(
+    struct zwp_input_inhibit_manager_v1* zwp_input_inhibit_manager_v1) {
+    return wl_proxy_get_version((struct wl_proxy*)zwp_input_inhibit_manager_v1);
 }
 
 /**
@@ -109,15 +107,15 @@ zwp_input_inhibit_manager_v1_get_version(struct zwp_input_inhibit_manager_v1 *zw
  *
  * Create a new input inhibitor.
  */
-static inline struct zwp_input_inhibitor_v1 *
-zwp_input_inhibit_manager_v1_get_inhibitor(struct zwp_input_inhibit_manager_v1 *zwp_input_inhibit_manager_v1, struct wl_surface *surface)
-{
-	struct wl_proxy *id;
+static inline struct zwp_input_inhibitor_v1* zwp_input_inhibit_manager_v1_get_inhibitor(
+    struct zwp_input_inhibit_manager_v1* zwp_input_inhibit_manager_v1, struct wl_surface* surface) {
+    struct wl_proxy* id;
 
-	id = wl_proxy_marshal_constructor((struct wl_proxy *) zwp_input_inhibit_manager_v1,
-		 ZWP_INPUT_INHIBIT_MANAGER_V1_GET_INHIBITOR, &zwp_input_inhibitor_v1_interface, NULL, surface);
+    id = wl_proxy_marshal_constructor((struct wl_proxy*)zwp_input_inhibit_manager_v1,
+                                      ZWP_INPUT_INHIBIT_MANAGER_V1_GET_INHIBITOR,
+                                      &zwp_input_inhibitor_v1_interface, NULL, surface);
 
-	return (struct zwp_input_inhibitor_v1 *) id;
+    return (struct zwp_input_inhibitor_v1*)id;
 }
 
 /**
@@ -126,23 +124,20 @@ zwp_input_inhibit_manager_v1_get_inhibitor(struct zwp_input_inhibit_manager_v1 *
 #define ZWP_INPUT_INHIBITOR_V1_DESTROY_SINCE_VERSION 1
 
 /** @ingroup iface_zwp_input_inhibitor_v1 */
-static inline void
-zwp_input_inhibitor_v1_set_user_data(struct zwp_input_inhibitor_v1 *zwp_input_inhibitor_v1, void *user_data)
-{
-	wl_proxy_set_user_data((struct wl_proxy *) zwp_input_inhibitor_v1, user_data);
+static inline void zwp_input_inhibitor_v1_set_user_data(
+    struct zwp_input_inhibitor_v1* zwp_input_inhibitor_v1, void* user_data) {
+    wl_proxy_set_user_data((struct wl_proxy*)zwp_input_inhibitor_v1, user_data);
 }
 
 /** @ingroup iface_zwp_input_inhibitor_v1 */
-static inline void *
-zwp_input_inhibitor_v1_get_user_data(struct zwp_input_inhibitor_v1 *zwp_input_inhibitor_v1)
-{
-	return wl_proxy_get_user_data((struct wl_proxy *) zwp_input_inhibitor_v1);
+static inline void* zwp_input_inhibitor_v1_get_user_data(
+    struct zwp_input_inhibitor_v1* zwp_input_inhibitor_v1) {
+    return wl_proxy_get_user_data((struct wl_proxy*)zwp_input_inhibitor_v1);
 }
 
-static inline uint32_t
-zwp_input_inhibitor_v1_get_version(struct zwp_input_inhibitor_v1 *zwp_input_inhibitor_v1)
-{
-	return wl_proxy_get_version((struct wl_proxy *) zwp_input_inhibitor_v1);
+static inline uint32_t zwp_input_inhibitor_v1_get_version(
+    struct zwp_input_inhibitor_v1* zwp_input_inhibitor_v1) {
+    return wl_proxy_get_version((struct wl_proxy*)zwp_input_inhibitor_v1);
 }
 
 /**
@@ -150,16 +145,14 @@ zwp_input_inhibitor_v1_get_version(struct zwp_input_inhibitor_v1 *zwp_input_inhi
  *
  * Destroy the input inhibitor.
  */
-static inline void
-zwp_input_inhibitor_v1_destroy(struct zwp_input_inhibitor_v1 *zwp_input_inhibitor_v1)
-{
-	wl_proxy_marshal((struct wl_proxy *) zwp_input_inhibitor_v1,
-		     ZWP_INPUT_INHIBITOR_V1_DESTROY);
+static inline void zwp_input_inhibitor_v1_destroy(
+    struct zwp_input_inhibitor_v1* zwp_input_inhibitor_v1) {
+    wl_proxy_marshal((struct wl_proxy*)zwp_input_inhibitor_v1, ZWP_INPUT_INHIBITOR_V1_DESTROY);
 
-	wl_proxy_destroy((struct wl_proxy *) zwp_input_inhibitor_v1);
+    wl_proxy_destroy((struct wl_proxy*)zwp_input_inhibitor_v1);
 }
 
-#ifdef  __cplusplus
+#ifdef __cplusplus
 }
 #endif
 

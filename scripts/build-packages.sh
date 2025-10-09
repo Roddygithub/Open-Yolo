@@ -11,29 +11,29 @@ NC='\033[0m' # No Color
 
 # Fonction pour afficher les messages
 log_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+  echo -e "${GREEN}[INFO]${NC} $1"
 }
 
 log_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
+  echo -e "${YELLOW}[WARN]${NC} $1"
 }
 
 log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+  echo -e "${RED}[ERROR]${NC} $1"
 }
 
 # Vérifier que nous sommes à la racine du projet
 if [ ! -f "CMakeLists.txt" ]; then
-    log_error "Ce script doit être exécuté depuis la racine du projet"
-    exit 1
+  log_error "Ce script doit être exécuté depuis la racine du projet"
+  exit 1
 fi
 
 # Variables
 PROJECT_NAME="open-yolo"
 VERSION=$(grep -oP 'project\(OpenYolo\s+VERSION\s+\K[0-9.]+' ../CMakeLists.txt)
 if [ -z "$VERSION" ]; then
-    log_error "Impossible de déterminer la version depuis CMakeLists.txt"
-    exit 1
+  log_error "Impossible de déterminer la version depuis CMakeLists.txt"
+  exit 1
 fi
 BUILD_DIR="build-package"
 PACKAGE_DIR="packages"
@@ -48,11 +48,11 @@ log_info "Construction du projet..."
 cd "$BUILD_DIR"
 
 cmake .. \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX=/usr \
-    -DENABLE_LOGGING=ON \
-    -DENABLE_LTO=ON \
-    -DBUILD_TESTS=OFF
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX=/usr \
+  -DENABLE_LOGGING=ON \
+  -DENABLE_LTO=ON \
+  -DBUILD_TESTS=OFF
 
 make -j$(nproc)
 
@@ -60,21 +60,21 @@ make -j$(nproc)
 log_info "Génération des paquets..."
 
 # Paquet DEB
-if command -v dpkg &> /dev/null; then
-    log_info "Génération du paquet DEB..."
-    cpack -G DEB
-    mv *.deb "../$PACKAGE_DIR/"
+if command -v dpkg &>/dev/null; then
+  log_info "Génération du paquet DEB..."
+  cpack -G DEB
+  mv *.deb "../$PACKAGE_DIR/"
 else
-    log_warn "dpkg n'est pas installé, impossible de générer le paquet DEB"
+  log_warn "dpkg n'est pas installé, impossible de générer le paquet DEB"
 fi
 
 # Paquet RPM
-if command -v rpmbuild &> /dev/null; then
-    log_info "Génération du paquet RPM..."
-    cpack -G RPM
-    mv *.rpm "../$PACKAGE_DIR/"
+if command -v rpmbuild &>/dev/null; then
+  log_info "Génération du paquet RPM..."
+  cpack -G RPM
+  mv *.rpm "../$PACKAGE_DIR/"
 else
-    log_warn "rpmbuild n'est pas installé, impossible de générer le paquet RPM"
+  log_warn "rpmbuild n'est pas installé, impossible de générer le paquet RPM"
 fi
 
 # Archive TGZ (générique)

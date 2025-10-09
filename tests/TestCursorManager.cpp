@@ -1,8 +1,10 @@
 #include <gtest/gtest.h>
-#include "cursormanager/CursorManager.hpp"
+
 #include <filesystem>
 #include <fstream>
 #include <memory>
+
+#include "cursormanager/CursorManager.hpp"
 
 namespace fs = std::filesystem;
 using namespace cursor_manager;
@@ -13,23 +15,23 @@ protected:
         // Créer un répertoire temporaire pour les tests
         testDir = fs::temp_directory_path() / "open-yolo-test";
         fs::create_directories(testDir);
-        
+
         // Créer un fichier de curseur de test
         testCursorPath = testDir / "test_cursor.png";
         std::ofstream testFile(testCursorPath);
         testFile << "PNG test file";
         testFile.close();
-        
+
         // Initialiser le gestionnaire de curseurs
         manager = std::make_unique<CursorManager>();
         manager->initialize();
     }
-    
+
     static void TearDownTestSuite() {
         // Nettoyer les fichiers temporaires
         fs::remove_all(testDir);
     }
-    
+
     void SetUp() override {
         // Réinitialiser l'état avant chaque test
         if (manager) {
@@ -37,7 +39,7 @@ protected:
             manager->setCursorPath(testCursorPath.string());
         }
     }
-    
+
     static std::unique_ptr<CursorManager> manager;
     static fs::path testDir;
     static fs::path testCursorPath;
@@ -77,7 +79,7 @@ TEST_F(CursorManagerTest, EnableDisable) {
     // Tester l'activation/désactivation
     manager->setEnabled(false);
     EXPECT_FALSE(manager->isEnabled());
-    
+
     manager->setEnabled(true);
     EXPECT_TRUE(manager->isEnabled());
 }
@@ -87,12 +89,12 @@ TEST_F(CursorManagerTest, Visibility) {
     // Note: La visibilité est liée à l'activation dans cette implémentation
     manager->setEnabled(true);
     EXPECT_TRUE(manager->isEnabled());
-    
+
     manager->setEnabled(false);
     EXPECT_FALSE(manager->isEnabled());
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

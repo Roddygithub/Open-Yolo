@@ -1,16 +1,16 @@
 ---
 Language:        Cpp
-# BasedOnStyle:  Google
+# Basé sur le style Google, avec quelques modifications
+BasedOnStyle:  Google
 AccessModifierOffset: -4
 AlignAfterOpenBracket: Align
-AlignConsecutiveMacros: false
 AlignConsecutiveAssignments: false
 AlignConsecutiveDeclarations: false
 AlignEscapedNewlines: Left
 AlignOperands:   true
 AlignTrailingComments: true
 AllowAllParametersOfDeclarationOnNextLine: true
-AllowShortBlocksOnASingleLine: Never
+AllowShortBlocksOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: false
@@ -22,7 +22,7 @@ AlwaysBreakTemplateDeclarations: Yes
 BinPackArguments: true
 BinPackParameters: true
 BraceWrapping:
-  AfterClass:      true
+  AfterClass:      false
   AfterControlStatement: false
   AfterEnum:       false
   AfterFunction:   true
@@ -66,7 +66,8 @@ IncludeCategories:
     Priority:        2
   - Regex:           '^<.*\.h>'
     Priority:        1
-  - Regex:           '^<.*'\n    Priority:        2
+  - Regex:           '^<.*'
+    Priority:        2
   - Regex:           '.*'
     Priority:        3
 IncludeIsMainRegex: '([-_](test|unittest))?$'
@@ -103,7 +104,7 @@ RawStringFormats:
       - Cpp
       - CPP
       - 'c++'
-      - 'C++'
+      - 'cxx'
     CanonicalDelimiter: ''
     BasedOnStyle:    google
   - Language:        TextProto
@@ -111,15 +112,14 @@ RawStringFormats:
       - pb
       - PB
       - proto
-      - PROTO
     EnclosingFunctions:
       - EqualsProto
-      - EquivToProto
-      - PARSE_PARTIAL_TEXT_PROTO
+      - EXPECT_THAT
+      - ASSERT_THAT
     CanonicalDelimiter: ''
     BasedOnStyle:    google
 ReflowComments:  true
-SortIncludes:    true
+SortIncludes:   true
 SortUsingDeclarations: true
 SpaceAfterCStyleCast: false
 SpaceAfterTemplateKeyword: true

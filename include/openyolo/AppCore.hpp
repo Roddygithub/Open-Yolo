@@ -1,10 +1,10 @@
 #ifndef OPENYOLO_APP_CORE_HPP
 #define OPENYOLO_APP_CORE_HPP
 
-#include <string>
-#include <memory>
-#include <csignal>
 #include <atomic>
+#include <csignal>
+#include <memory>
+#include <string>
 
 // En-têtes GTK
 #include <gtkmm/application.h>
@@ -12,11 +12,11 @@
 
 // Forward declarations
 namespace cursor_manager {
-    class CursorManager;
+class CursorManager;
 }
 
 namespace input {
-    class DisplayManager;
+class DisplayManager;
 }
 
 namespace openyolo {
@@ -39,13 +39,13 @@ void initializeConfig();
 void initializeDefaultConfig();
 void initializeLogger();
 void initializeGtkEnvironment();
-void renderLoop(std::shared_ptr<cursor_manager::CursorManager> cursorManager, 
-               std::shared_ptr<input::DisplayManager> displayManager);
+void renderLoop(std::shared_ptr<cursor_manager::CursorManager> cursorManager,
+                std::shared_ptr<input::DisplayManager> displayManager);
 int initialize(int argc, char* argv[]);
 
-} // namespace openyolo
+}  // namespace openyolo
 
 // Déclaration de la fonction main globale
 int main(int argc, char* argv[]);
 
-#endif // OPENYOLO_APP_CORE_HPP
+#endif  // OPENYOLO_APP_CORE_HPP

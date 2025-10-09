@@ -8,7 +8,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m'  # No Color
+NC='\033[0m' # No Color
 
 # Configuration
 BRANCH="main"
@@ -18,8 +18,8 @@ REPO_NAME="Open-Yolo"
 # Récupérer la version depuis CMakeLists.txt
 VERSION=$(grep -oP 'project\(OpenYolo\s+VERSION\s+\K[0-9.]+' "${0%/*}/../CMakeLists.txt")
 if [ -z "$VERSION" ]; then
-    echo -e "${RED}[ERREUR]${NC} Impossible de déterminer la version depuis CMakeLists.txt"
-    exit 1
+  echo -e "${RED}[ERREUR]${NC} Impossible de déterminer la version depuis CMakeLists.txt"
+  exit 1
 fi
 
 RELEASE_TITLE="Open-Yolo v${VERSION}"
@@ -32,30 +32,30 @@ echo ""
 # Vérifier que nous sommes sur la branche main
 CURRENT_BRANCH=$(git branch --show-current)
 if [ "$CURRENT_BRANCH" != "$BRANCH" ]; then
-    echo -e "${RED}[ERREUR]${NC} Vous devez être sur la branche '$BRANCH' (actuellement sur '$CURRENT_BRANCH')"
-    exit 1
+  echo -e "${RED}[ERREUR]${NC} Vous devez être sur la branche '$BRANCH' (actuellement sur '$CURRENT_BRANCH')"
+  exit 1
 fi
 
 # Vérifier qu'il n'y a pas de modifications non commitées
 if ! git diff-index --quiet HEAD --; then
-    echo -e "${RED}[ERREUR]${NC} Il y a des modifications non commitées"
-    echo -e "${YELLOW}Veuillez commiter ou stasher vos modifications${NC}"
-    exit 1
+  echo -e "${RED}[ERREUR]${NC} Il y a des modifications non commitées"
+  echo -e "${YELLOW}Veuillez commiter ou stasher vos modifications${NC}"
+  exit 1
 fi
 
 # Vérifier que le tag n'existe pas déjà
 if git rev-parse "$TAG" >/dev/null 2>&1; then
-    echo -e "${YELLOW}[ATTENTION]${NC} Le tag $TAG existe déjà"
-    read -p "Voulez-vous le supprimer et le recréer ? (y/N) " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        git tag -d "$TAG"
-        git push origin ":refs/tags/$TAG" 2>/dev/null || true
-        echo -e "${GREEN}✓${NC} Tag supprimé"
-    else
-        echo -e "${YELLOW}Annulation${NC}"
-        exit 0
-    fi
+  echo -e "${YELLOW}[ATTENTION]${NC} Le tag $TAG existe déjà"
+  read -p "Voulez-vous le supprimer et le recréer ? (y/N) " -n 1 -r
+  echo
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    git tag -d "$TAG"
+    git push origin ":refs/tags/$TAG" 2>/dev/null || true
+    echo -e "${GREEN}✓${NC} Tag supprimé"
+  else
+    echo -e "${YELLOW}Annulation${NC}"
+    exit 0
+  fi
 fi
 
 # Créer le tag
@@ -83,28 +83,28 @@ echo -e "${GREEN}✓${NC} Tag poussé vers GitHub"
 # Générer les paquets
 echo -e "${YELLOW}[3/6]${NC} Génération des paquets..."
 if [ -f "scripts/build-packages.sh" ]; then
-    chmod +x scripts/build-packages.sh
-    ./scripts/build-packages.sh
-    echo -e "${GREEN}✓${NC} Paquets générés"
+  chmod +x scripts/build-packages.sh
+  ./scripts/build-packages.sh
+  echo -e "${GREEN}✓${NC} Paquets générés"
 else
-    echo -e "${YELLOW}⚠${NC} Script build-packages.sh non trouvé, génération manuelle..."
-    mkdir -p packages
-    cd build 2>/dev/null || (mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release)
-    make -j$(nproc)
-    cpack -G DEB
-    cpack -G RPM
-    cpack -G TGZ
-    mv *.deb *.rpm *.tar.gz ../packages/ 2>/dev/null || true
-    cd ..
-    echo -e "${GREEN}✓${NC} Paquets générés manuellement"
+  echo -e "${YELLOW}⚠${NC} Script build-packages.sh non trouvé, génération manuelle..."
+  mkdir -p packages
+  cd build 2>/dev/null || (mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release)
+  make -j$(nproc)
+  cpack -G DEB
+  cpack -G RPM
+  cpack -G TGZ
+  mv *.deb *.rpm *.tar.gz ../packages/ 2>/dev/null || true
+  cd ..
+  echo -e "${GREEN}✓${NC} Paquets générés manuellement"
 fi
 
 # Vérifier les artefacts
 echo -e "${YELLOW}[4/6]${NC} Vérification des artefacts..."
 ARTIFACTS_DIR="packages"
 if [ ! -d "$ARTIFACTS_DIR" ]; then
-    echo -e "${RED}✗${NC} Répertoire packages/ non trouvé"
-    exit 1
+  echo -e "${RED}✗${NC} Répertoire packages/ non trouvé"
+  exit 1
 fi
 
 echo -e "${BLUE}Artefacts disponibles :${NC}"
@@ -112,7 +112,7 @@ ls -lh "$ARTIFACTS_DIR"
 
 # Créer le fichier de description pour la release
 echo -e "${YELLOW}[5/6]${NC} Génération de la description de release..."
-cat > RELEASE_NOTES_v${VERSION}.md << 'EOF'
+cat >RELEASE_NOTES_v${VERSION}.md <<'EOF'
 # 🎉 Open-Yolo v1.0.0 – Première Version Stable pour Linux
 
 **Alternative native Linux à YoloMouse** - Gestionnaire de curseurs personnalisés avec support des animations, multi-écrans et rendu GPU optimisé.

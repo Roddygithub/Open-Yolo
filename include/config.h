@@ -37,4 +37,4 @@
 /* Define to 1 if you have the XKB extension. */
 #define HAVE_XKB 1
 
-#endif // OPEN_YOLO_CONFIG_H
+#endif  // OPEN_YOLO_CONFIG_H

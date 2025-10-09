@@ -8,18 +8,29 @@ project(OpenYolo
 )
 
 # Configuration des options
-option(BUILD_TESTS "Build the test suite" OFF)  # Désactivé temporairement
-option(BUILD_EXAMPLES "Build examples" OFF)
+option(BUILD_TESTS "Build the test suite" ON)
+option(BUILD_EXAMPLES "Build examples" ON)
 option(ENABLE_LOGGING "Enable debug logging" ON)
 option(ENABLE_COVERAGE "Enable code coverage" OFF)
 option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
 option(ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)
 option(ENABLE_LTO "Enable Link Time Optimization" ON)
-option(ENABLE_UNITY_BUILD "Enable Unity builds for faster compilation" ON)
+option(ENABLE_UNITY_BUILD "Enable Unity builds for faster compilation" OFF)
+
+# Configuration des chemins d'installation
+set(CMAKE_INSTALL_PREFIX "/usr" CACHE PATH "Installation prefix")
+set(CMAKE_INSTALL_BINDIR "bin" CACHE STRING "Binary installation directory")
+set(CMAKE_INSTALL_LIBDIR "lib" CACHE STRING "Library installation directory")
+set(CMAKE_INSTALL_INCLUDEDIR "include" CACHE STRING "Header files installation directory")
+set(CMAKE_INSTALL_DATADIR "share" CACHE STRING "Data files installation directory")
+set(CMAKE_INSTALL_DOCDIR "${CMAKE_INSTALL_DATADIR}/doc/${PROJECT_NAME}" CACHE STRING "Documentation installation directory")
 
 # Configuration des chemins d'inclusion
-include_directories(${CMAKE_SOURCE_DIR}/include)
-include_directories(${CMAKE_SOURCE_DIR}/src)
+include_directories(
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_BINARY_DIR}
+)
 
 # Recherche des dépendances avec pkg-config
 find_package(PkgConfig REQUIRED)
@@ -313,9 +324,17 @@ else()  # Linux/Unix
     # Détection des dépendances avec pkg-config
     find_package(PkgConfig REQUIRED)
     
-    # Détection de SDL2 et SDL2_image
+    # Détection de SDL2 (requis) et SDL2_image (optionnel)
     pkg_check_modules(SDL2 REQUIRED sdl2)
-    pkg_check_modules(SDL2_IMAGE REQUIRED sdl2_image)
+    option(ENABLE_SDL2_IMAGE "Enable SDL2_image support" OFF)
+    if(ENABLE_SDL2_IMAGE)
+        pkg_check_modules(SDL2_IMAGE REQUIRED sdl2_image)
+        add_definitions(-DHAS_SDL2_IMAGE)
+        message(STATUS "SDL2_image support enabled")
+    else()
+        message(STATUS "SDL2_image support disabled")
+        set(SDL2_IMAGE_LIBRARIES "")
+    endif()
     
     # Détection de GTKmm et dépendances
     pkg_check_modules(GTKMM3 REQUIRED gtkmm-3.0)
