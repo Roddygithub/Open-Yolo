@@ -1,6 +1,6 @@
 #pragma once
-#include <vector>
 #include <string>
+#include <vector>
 
 class Image {
 public:
@@ -12,4 +12,3 @@ public:
     int height = 0;
     std::vector<unsigned char> pixels;
 };
-

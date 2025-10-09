@@ -16,15 +16,15 @@ NC='\033[0m'
 
 # Lire la version actuelle
 if [ ! -f "$VERSION_FILE" ]; then
-    echo -e "${RED}ERROR: VERSION file not found${NC}"
-    exit 1
+  echo -e "${RED}ERROR: VERSION file not found${NC}"
+  exit 1
 fi
 
 CURRENT_VERSION=$(cat "$VERSION_FILE")
 echo -e "${BLUE}Current version: $CURRENT_VERSION${NC}"
 
 # Parser la version
-IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
+IFS='.' read -r -a VERSION_PARTS <<<"$CURRENT_VERSION"
 MAJOR="${VERSION_PARTS[0]}"
 MINOR="${VERSION_PARTS[1]}"
 PATCH="${VERSION_PARTS[2]}"
@@ -39,22 +39,22 @@ echo ""
 read -p "Enter choice [1-3]: " CHOICE
 
 case $CHOICE in
-    1)
-        NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
-        BUMP_TYPE="patch"
-        ;;
-    2)
-        NEW_VERSION="$MAJOR.$((MINOR + 1)).0"
-        BUMP_TYPE="minor"
-        ;;
-    3)
-        NEW_VERSION="$((MAJOR + 1)).0.0"
-        BUMP_TYPE="major"
-        ;;
-    *)
-        echo -e "${RED}Invalid choice${NC}"
-        exit 1
-        ;;
+  1)
+    NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
+    BUMP_TYPE="patch"
+    ;;
+  2)
+    NEW_VERSION="$MAJOR.$((MINOR + 1)).0"
+    BUMP_TYPE="minor"
+    ;;
+  3)
+    NEW_VERSION="$((MAJOR + 1)).0.0"
+    BUMP_TYPE="major"
+    ;;
+  *)
+    echo -e "${RED}Invalid choice${NC}"
+    exit 1
+    ;;
 esac
 
 echo ""
@@ -62,55 +62,55 @@ echo -e "${YELLOW}Bumping version from $CURRENT_VERSION to $NEW_VERSION ($BUMP_T
 echo ""
 
 # Mettre à jour VERSION
-echo "$NEW_VERSION" > "$VERSION_FILE"
+echo "$NEW_VERSION" >"$VERSION_FILE"
 echo -e "${GREEN}✓ Updated VERSION file${NC}"
 
 # Mettre à jour CMakeLists.txt
 if [ -f "$PROJECT_ROOT/CMakeLists.txt" ]; then
-    sed -i "s/VERSION [0-9]\+\.[0-9]\+\.[0-9]\+/VERSION $NEW_VERSION/" "$PROJECT_ROOT/CMakeLists.txt"
-    echo -e "${GREEN}✓ Updated CMakeLists.txt${NC}"
+  sed -i "s/VERSION [0-9]\+\.[0-9]\+\.[0-9]\+/VERSION $NEW_VERSION/" "$PROJECT_ROOT/CMakeLists.txt"
+  echo -e "${GREEN}✓ Updated CMakeLists.txt${NC}"
 fi
 
 # Créer une nouvelle entrée dans CHANGELOG.md
 CHANGELOG="$PROJECT_ROOT/CHANGELOG.md"
 if [ -f "$CHANGELOG" ]; then
-    DATE=$(date +%Y-%m-%d)
-    
-    # Créer un fichier temporaire avec la nouvelle entrée
-    TEMP_FILE=$(mktemp)
-    
-    # Écrire l'en-tête du changelog
-    head -n 7 "$CHANGELOG" > "$TEMP_FILE"
-    
-    # Ajouter la nouvelle version
-    echo "" >> "$TEMP_FILE"
-    echo "## [$NEW_VERSION] - $DATE" >> "$TEMP_FILE"
-    echo "" >> "$TEMP_FILE"
-    echo "### ✨ Ajouté" >> "$TEMP_FILE"
-    echo "" >> "$TEMP_FILE"
-    echo "- TODO: Add new features here" >> "$TEMP_FILE"
-    echo "" >> "$TEMP_FILE"
-    echo "### 🔧 Modifié" >> "$TEMP_FILE"
-    echo "" >> "$TEMP_FILE"
-    echo "- TODO: Add modifications here" >> "$TEMP_FILE"
-    echo "" >> "$TEMP_FILE"
-    echo "### 🐛 Corrigé" >> "$TEMP_FILE"
-    echo "" >> "$TEMP_FILE"
-    echo "- TODO: Add bug fixes here" >> "$TEMP_FILE"
-    echo "" >> "$TEMP_FILE"
-    
-    # Ajouter le reste du changelog
-    tail -n +8 "$CHANGELOG" >> "$TEMP_FILE"
-    
-    # Remplacer le fichier original
-    mv "$TEMP_FILE" "$CHANGELOG"
-    
-    echo -e "${GREEN}✓ Updated CHANGELOG.md${NC}"
+  DATE=$(date +%Y-%m-%d)
+
+  # Créer un fichier temporaire avec la nouvelle entrée
+  TEMP_FILE=$(mktemp)
+
+  # Écrire l'en-tête du changelog
+  head -n 7 "$CHANGELOG" >"$TEMP_FILE"
+
+  # Ajouter la nouvelle version
+  echo "" >>"$TEMP_FILE"
+  echo "## [$NEW_VERSION] - $DATE" >>"$TEMP_FILE"
+  echo "" >>"$TEMP_FILE"
+  echo "### ✨ Ajouté" >>"$TEMP_FILE"
+  echo "" >>"$TEMP_FILE"
+  echo "- TODO: Add new features here" >>"$TEMP_FILE"
+  echo "" >>"$TEMP_FILE"
+  echo "### 🔧 Modifié" >>"$TEMP_FILE"
+  echo "" >>"$TEMP_FILE"
+  echo "- TODO: Add modifications here" >>"$TEMP_FILE"
+  echo "" >>"$TEMP_FILE"
+  echo "### 🐛 Corrigé" >>"$TEMP_FILE"
+  echo "" >>"$TEMP_FILE"
+  echo "- TODO: Add bug fixes here" >>"$TEMP_FILE"
+  echo "" >>"$TEMP_FILE"
+
+  # Ajouter le reste du changelog
+  tail -n +8 "$CHANGELOG" >>"$TEMP_FILE"
+
+  # Remplacer le fichier original
+  mv "$TEMP_FILE" "$CHANGELOG"
+
+  echo -e "${GREEN}✓ Updated CHANGELOG.md${NC}"
 fi
 
 # Créer le fichier de release GitHub
 RELEASE_FILE="$PROJECT_ROOT/GITHUB_RELEASE_v${NEW_VERSION}.md"
-cat > "$RELEASE_FILE" << EOF
+cat >"$RELEASE_FILE" <<EOF
 # 🎉 Open-Yolo v${NEW_VERSION}
 
 **Date de release :** $(date +"%d %B %Y")

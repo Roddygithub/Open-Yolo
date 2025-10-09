@@ -4,6 +4,7 @@
 #include <vector>
 #include <map>
 #include <filesystem>
+#include <system_error>
 #include <nlohmann/json.hpp>
 #include "Logger.hpp"
 
@@ -78,13 +79,28 @@ public:
      * @param index Index du profil à supprimer
      * @return true si la suppression a réussi
      */
-    bool deleteProfile(int index);
+    std::error_code deleteProfile(int index);
     
     /**
      * @brief Sauvegarde le profil actif
      * @return true si la sauvegarde a réussi
      */
     bool saveCurrentProfile();
+
+    /**
+     * @brief Imports a profile from a file.
+     * @param filePath Path to the profile file.
+     * @return An error code on failure.
+     */
+    std::error_code importProfile(const std::string& filePath);
+
+    /**
+     * @brief Exports a profile to a file.
+     * @param profileName The name of the profile to export.
+     * @param filePath The path to export the profile to.
+     * @return An error code on failure.
+     */
+    std::error_code exportProfile(const std::string& profileName, const std::string& filePath);
     
     // Désactive la copie et l'assignation
     ProfileManager(const ProfileManager&) = delete;
@@ -99,10 +115,10 @@ private:
     std::filesystem::path m_profilesDir;
     
     // Charge un profil depuis un fichier
-    bool loadProfileFromFile(const std::filesystem::path& filePath);
+    std::error_code loadProfileFromFile(const std::filesystem::path& filePath);
     
     // Sauvegarde un profil dans un fichier
-    bool saveProfileToFile(const CursorProfile& profile) const;
+    std::error_code saveProfileToFile(const CursorProfile& profile) const;
     
     // Obtient le chemin du fichier de configuration
     std::filesystem::path getProfilePath(const std::string& profileName) const;

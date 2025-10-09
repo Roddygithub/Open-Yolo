@@ -38,7 +38,6 @@ target_link_directories(cursormanager PRIVATE
 # Lier les bibliothèques
 target_link_libraries(cursormanager PRIVATE
     ${SDL2_LIBRARIES}
-    ${SDL2_IMAGE_LIBRARIES}
     ${OPENGL_LIBRARIES}
     ${GLEW_LIBRARIES}
     ${GLEW_LIBRARY}  # Lien direct vers la bibliothèque GLEW
@@ -52,8 +51,18 @@ target_link_libraries(cursormanager PRIVATE
     ${GDKMM3_LIBRARIES}
     ${GLIBMM2_4_LIBRARIES}
     ${SIGC2_LIBRARIES}
-    dl  # Pour dlopen, dlsym, etc.
-    pthread  # Pour le support des threads POSIX
+)
+
+# Ajouter SDL2_image si activé
+if(ENABLE_SDL2_IMAGE)
+    target_link_libraries(cursormanager PRIVATE ${SDL2_IMAGE_LIBRARIES})
+    target_compile_definitions(cursormanager PRIVATE HAS_SDL2_IMAGE)
+endif()
+
+# Ajouter les bibliothèques système
+target_link_libraries(cursormanager PRIVATE
+    dl      # Pour dlopen, dlsym, etc.
+    pthread # Pour le support des threads POSIX
 )
 
 # Installation de la bibliothèque

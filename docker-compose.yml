@@ -1,131 +1,159 @@
 version: '3.8'
 
-# =============================================================================
-# Configuration des réseaux
-# =============================================================================
-networks:
-  openyolo_net:
-    driver: bridge
-    attachable: true
+# Configuration partagée
+x-common-variables: &common-variables
+  TZ: ${TZ:-Europe/Paris}
+  LANG: C.UTF-8
+  LC_ALL: C.UTF-8
+  CC: /usr/bin/clang
+  CXX: /usr/bin/clang++
+  CMAKE_GENERATOR: Ninja
+  BUILD_TYPE: ${BUILD_TYPE:-Debug}
+  CCACHE_DIR: /ccache
+  DISPLAY: ${DISPLAY:-:0}
+  XAUTHORITY: /tmp/.docker.xauth
 
-# =============================================================================
-# Configuration des volumes
-# =============================================================================
+x-common-volumes: &common-volumes
+  - ${PWD}:/home/developer/OpenYolo
+  - build-cache:/home/developer/OpenYolo/build
+  - ccache:/ccache
+  - /tmp/.X11-unix:/tmp/.X11-unix:ro
+
+# Définition des volumes partagés
 volumes:
-  # Volume pour les données de l'application
-  openyolo-data:
-    name: ${COMPOSE_PROJECT_NAME:-openyolo}_data
+  build-cache:
+  ccache:
 
-  # Volume pour le socket X11
-  x11-socket:
-    name: ${COMPOSE_PROJECT_NAME:-openyolo}_x11_socket
-
-  # Volume pour les fichiers temporaires X11
-  x11-tmp:
-    name: ${COMPOSE_PROJECT_NAME:-openyolo}_x11_tmp
-
-  # Volume pour les logs
-  openyolo-logs:
-    name: ${COMPOSE_PROJECT_NAME:-openyolo}_logs
-
-# =============================================================================
-# Configuration des services
-# =============================================================================
 services:
-  # Service Xvfb pour fournir un serveur X virtuel
-  xvfb:
-    build:
-      context: .
-      dockerfile: Dockerfile.xvfb
-      args:
-        - USER_UID=${UID:-1000}
-        - USER_GID=${GID:-1000}
-        - BUILDKIT_INLINE_CACHE=1
-    container_name: ${COMPOSE_PROJECT_NAME:-openyolo}-xvfb
-    hostname: ${COMPOSE_PROJECT_NAME:-openyolo}-xvfb
-    environment:
-      - DISPLAY=:99
-      - SCREEN_WIDTH=1920
-      - SCREEN_HEIGHT=1080
-      - SCREEN_DEPTH=24
-      - USER_UID=${UID:-1000}
-      - USER_GID=${GID:-1000}
-      - USERNAME=developer
-    volumes:
-      - x11-socket:/tmp/.X11-unix
-      - x11-tmp:/tmp
-    networks:
-      - openyolo_net
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "xdpyinfo", "-display", ":99.0"]
-      interval: 5s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
-
-  # Service principal OpenYolo
-  openyolo:
+  # Service principal de développement
+  dev:
     build:
       context: .
       dockerfile: Dockerfile
+      target: builder
       args:
-        - UID=${UID:-1000}
-        - GID=${GID:-1000}
-        - BUILDKIT_INLINE_CACHE=1
-    container_name: ${COMPOSE_PROJECT_NAME:-openyolo}-app
-    hostname: ${COMPOSE_PROJECT_NAME:-openyolo}-app
-    depends_on:
-      xvfb:
-        condition: service_healthy
+        - DEBIAN_FRONTEND=noninteractive
+    container_name: openyolo-dev
     environment:
-      # Configuration de base
-      - DISPLAY=:99
-      - UID=${UID:-1000}
-      - GID=${GID:-1000}
-      - USERNAME=developer
-      
-      # Configuration X11
-      - XAUTHORITY=/tmp/.Xauthority
-      - XDG_RUNTIME_DIR=/tmp/runtime-dev
-      
-      # Configuration de débogage
-      - G_MESSAGES_DEBUG=${G_MESSAGES_DEBUG:-all}
-      - G_DEBUG=${G_DEBUG:-fatal-warnings}
-      - DEBUG=${DEBUG:-0}
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      
-      # Configuration de l'application
-      - APP_NAME=OpenYolo
-      - APP_HOME=/workspace
-      
-      # Configuration GTK
-      - GTK_THEME=Adwaita
-      - GDK_BACKEND=x11
-      - CLUTTER_BACKEND=x11
-      - NO_AT_BRIDGE=1
+      <<: *common-variables
     volumes:
-      - .:/workspace
-      - x11-socket:/tmp/.X11-unix:ro
-      - openyolo-data:/home/developer/.local/share/openyolo
-      - openyolo-logs:/var/log/openyolo
-    working_dir: /workspace
-    # Options de terminal
+      - ${PWD}:/home/developer/OpenYolo
+      - build-cache:/home/developer/OpenYolo/build
+      - ccache:/ccache
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+      - /dev/input:/dev/input:ro
+      - /dev/dri:/dev/dri  # Accélération matérielle
+    devices:
+      - /dev/input
+      - /dev/dri
+    working_dir: /home/developer/OpenYolo
+    command: /bin/bash
     tty: true
     stdin_open: true
-    # Configuration des privilèges
-    privileged: true
     security_opt:
       - seccomp:unconfined
+      - apparmor:unconfined
     cap_add:
       - SYS_PTRACE
+      - SYS_ADMIN  # Nécessaire pour certains outils de débogage
+    privileged: true  # Nécessaire pour certains outils de profilage
+
+  # Service pour exécuter les tests
+  test:
+    extends:
+      service: dev
+    container_name: openyolo-test
+    working_dir: /home/developer/OpenYolo/build
+    environment:
+      TZ: ${TZ:-Europe/Paris}
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+      CC: /usr/bin/clang
+      CXX: /usr/bin/clang++
+      CMAKE_GENERATOR: Ninja
+      BUILD_TYPE: ${BUILD_TYPE:-Debug}
+      CCACHE_DIR: /ccache
+      DISPLAY: ${DISPLAY:-:0}
+      XAUTHORITY: /tmp/.docker.xauth
+      CTEST_OUTPUT_ON_FAILURE: 1
+      CTEST_PARALLEL_LEVEL: 4
+    command: >
+      sh -c "
+      cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE:-Debug} .. &&
+      cmake --build . -- -j$(nproc) &&
+      ctest --output-on-failure"
+
+  # Service pour le formatage du code
+  format:
+    extends:
+      service: dev
+    container_name: openyolo-format
+    working_dir: /home/developer/OpenYolo
+    command: >
+      sh -c "
+      echo '🔍 Recherche des fichiers à formater...' &&
+      echo '📝 Formatage du code C++...' &&
+      find src include tests -name '*.h' -o -name '*.hpp' -o -name '*.cpp' | xargs clang-format -style=file -i -fallback-style=none &&
+      echo '📝 Formatage des scripts shell...' &&
+      find scripts -name '*.sh' -exec shfmt -w -i 2 -ci -bn -s {} \; &&
+      echo '📝 Formatage des fichiers Python...' &&
+      find . -name '*.py' -exec black --line-length=88 --target-version=py39 {} \; &&
+      echo '✅ Formatage terminé avec succès !'
+      "
+    # Ne pas redémarrer le conteneur après l'exécution
+    restart: "no"
+
+  # Service pour la génération de documentation
+  docs:
+    extends:
+      service: dev
+    container_name: openyolo-docs
+    working_dir: /home/developer/OpenYolo/docs
+    ports:
+      - "8000:8000"  # Port pour la prévisualisation de la documentation
+    command: >
+      sh -c "
+      echo '📚 Installation des dépendances de documentation...' &&
+      pip install -r requirements-docs.txt &&
+      echo '📖 Génération de la documentation...' &&
+      make html &&
+      echo '🌍 Lancement du serveur de documentation sur http://localhost:8000' &&
+      cd _build/html && python -m http.server 8000
+      "
+  # Service pour le profilage et l'analyse des performances
+  profile:
+    extends:
+      service: dev
+    container_name: openyolo-profile
+    working_dir: /home/developer/OpenYolo
+    cap_add:
       - SYS_ADMIN
-    # Configuration des périphériques
-    devices:
-      - /dev/dri:/dev/dri
-      - /dev/input:/dev/input
-    # Configuration réseau
-    networks:
-      - openyolo_net
-    # Politique de redémarrage
-    restart: unless-stopped
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    privileged: true
+    command: /bin/bash
+    environment:
+      <<: *common-variables
+      PERF_EVENTS: 1
+      DEBUG: 1
+
+  # Service pour la construction des paquets
+  builder:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: openyolo-builder
+    environment:
+      - BUILD_TYPE=Release
+    volumes:
+      - ${PWD}:/home/developer/OpenYolo
+      - build-cache:/home/developer/OpenYolo/build
+      - ccache:/ccache
+    working_dir: /home/developer/OpenYolo
+    user: developer
+    command: ["/bin/bash", "scripts/build-packages.sh"]
+    # Ne pas redémarrer le conteneur après l'exécution
+    restart: "no"

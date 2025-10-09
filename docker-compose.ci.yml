@@ -1,0 +1,63 @@
+version: '3.8'
+
+# Définition des volumes partagés
+volumes:
+  build-cache:
+  ccache:
+
+services:
+  # Service pour exécuter les tests
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ci
+    environment:
+      - BUILD_TYPE=${BUILD_TYPE:-Debug}
+      - CCACHE_DIR=/ccache
+    volumes:
+      - ${PWD}:/home/developer/OpenYolo
+      - build-cache:/home/developer/OpenYolo/build
+      - ccache:/ccache
+    working_dir: /home/developer/OpenYolo/build
+    command: >
+      sh -c "
+      cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE:-Debug} .. &&
+      cmake --build . -- -j$(nproc) &&
+      ctest --output-on-failure"
+
+  # Service pour le formatage du code
+  format:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ci
+    volumes:
+      - ${PWD}:/home/developer/OpenYolo
+    working_dir: /home/developer/OpenYolo
+    user: developer
+    command: >
+      sh -c "
+      echo 'Formatage du code C++...' &&
+      find src include tests -name '*.h' -o -name '*.hpp' -o -name '*.cpp' | xargs clang-format -style=file -i &&
+      echo 'Formatage des scripts shell...' &&
+      find scripts -name '*.sh' -exec shfmt -w -i 2 -ci -bn -s {} \; &&
+      echo 'Formatage des fichiers Python...' &&
+      find . -name '*.py' -exec black --line-length=88 --target-version=py39 {} \; &&
+      echo 'Vérification des modifications...' &&
+      git diff --exit-code || (echo '\n\n⚠️  Des problèmes de formatage ont été détectés.\n    Exécutez \`docker-compose -f docker-compose.ci.yml run --rm format\` pour les corriger.' && exit 1)"
+
+  # Service pour construire le paquet de release
+  package:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: package
+    volumes:
+      - ${PWD}:/home/developer/OpenYolo
+      - build-cache:/home/developer/OpenYolo/build
+    working_dir: /home/developer/OpenYolo
+    command: >
+      sh -c "
+      mkdir -p dist &&
+      ./scripts/build-package.sh"

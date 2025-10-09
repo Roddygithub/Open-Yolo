@@ -17,8 +17,8 @@ echo ""
 
 # Vérifier que nous sommes à la racine du projet
 if [ ! -f "CMakeLists.txt" ]; then
-    echo -e "${RED}[ERREUR]${NC} Ce script doit être exécuté depuis la racine du projet"
-    exit 1
+  echo -e "${RED}[ERREUR]${NC} Ce script doit être exécuté depuis la racine du projet"
+  exit 1
 fi
 
 # Nettoyer les anciens builds
@@ -34,51 +34,51 @@ mkdir -p build-test
 # Configuration
 echo -e "${YELLOW}[2/5]${NC} Configuration CMake..."
 cd build-test
-cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON > "${CMAKE_LOG}" 2>&1
+cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON >"${CMAKE_LOG}" 2>&1
 
 if [ $? -eq 0 ]; then
-    echo -e "${GREEN}✓${NC} Configuration réussie"
+  echo -e "${GREEN}✓${NC} Configuration réussie"
 else
-    echo -e "${RED}✗${NC} Échec de la configuration"
-    echo -e "${YELLOW}Logs disponibles dans : ${BLUE}${CMAKE_LOG}${NC}"
-    exit 1
+  echo -e "${RED}✗${NC} Échec de la configuration"
+  echo -e "${YELLOW}Logs disponibles dans : ${BLUE}${CMAKE_LOG}${NC}"
+  exit 1
 fi
 
 # Compilation
 echo -e "${YELLOW}[3/5]${NC} Compilation du projet..."
-make -j$(nproc) > "${MAKE_LOG}" 2>&1
+make -j$(nproc) >"${MAKE_LOG}" 2>&1
 
 if [ $? -eq 0 ]; then
-    echo -e "${GREEN}✓${NC} Compilation réussie"
+  echo -e "${GREEN}✓${NC} Compilation réussie"
 else
-    echo -e "${RED}✗${NC} Échec de la compilation"
-    echo -e "${YELLOW}Logs disponibles dans : ${BLUE}${MAKE_LOG}${NC}"
-    exit 1
+  echo -e "${RED}✗${NC} Échec de la compilation"
+  echo -e "${YELLOW}Logs disponibles dans : ${BLUE}${MAKE_LOG}${NC}"
+  exit 1
 fi
 
 # Vérifier que le binaire existe
 echo -e "${YELLOW}[4/5]${NC} Vérification du binaire..."
 if [ -f "src/OpenYolo" ]; then
-    echo -e "${GREEN}✓${NC} Binaire trouvé : src/OpenYolo"
-    ls -lh src/OpenYolo
+  echo -e "${GREEN}✓${NC} Binaire trouvé : src/OpenYolo"
+  ls -lh src/OpenYolo
 elif [ -f "OpenYolo" ]; then
-    echo -e "${GREEN}✓${NC} Binaire trouvé : OpenYolo"
-    ls -lh OpenYolo
+  echo -e "${GREEN}✓${NC} Binaire trouvé : OpenYolo"
+  ls -lh OpenYolo
 else
-    echo -e "${RED}✗${NC} Binaire non trouvé"
-    echo "Recherche du binaire..."
-    find . -name "OpenYolo" -type f
-    exit 1
+  echo -e "${RED}✗${NC} Binaire non trouvé"
+  echo "Recherche du binaire..."
+  find . -name "OpenYolo" -type f
+  exit 1
 fi
 
 # Tests
 echo -e "${YELLOW}[5/5]${NC} Exécution des tests..."
-if ctest --output-on-failure > "${CTEST_LOG}" 2>&1; then
-    echo -e "${GREEN}✓${NC} Tous les tests sont passés"
+if ctest --output-on-failure >"${CTEST_LOG}" 2>&1; then
+  echo -e "${GREEN}✓${NC} Tous les tests sont passés"
 else
-    echo -e "${RED}✗${NC} Certains tests ont échoué"
-    echo -e "${YELLOW}Logs disponibles dans : ${BLUE}${CTEST_LOG}${NC}"
-    cat "${CTEST_LOG}"
+  echo -e "${RED}✗${NC} Certains tests ont échoué"
+  echo -e "${YELLOW}Logs disponibles dans : ${BLUE}${CTEST_LOG}${NC}"
+  cat "${CTEST_LOG}"
 fi
 
 cd ..

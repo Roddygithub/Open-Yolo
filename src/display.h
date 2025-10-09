@@ -18,5 +18,4 @@ public:
     std::vector<Screen> getScreens();
 };
 
-#endif // DISPLAY_H
-
+#endif  // DISPLAY_H

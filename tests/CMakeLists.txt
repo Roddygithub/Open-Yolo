@@ -14,6 +14,7 @@ if(BUILD_TESTS)
         test_gui.cpp
         test_wayland_backend.cpp
         test_theme_manager.cpp
+        test_profile_manager.cpp
     )
 
     # Créer l'exécutable de test principal

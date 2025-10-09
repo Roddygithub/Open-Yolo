@@ -1,20 +1,22 @@
 #ifndef INPUT_MANAGER_H
 #define INPUT_MANAGER_H
 
-#include "InputBackend.hpp"
-#include <memory>
-#include <string>
-#include <functional>
 #include <gdkmm.h>
 #include <gtkmm.h>
 
+#include <functional>
+#include <memory>
+#include <string>
+
+#include "InputBackend.hpp"
+
 // Forward declarations
 namespace cursor_manager {
-    class CursorManager;
+class CursorManager;
 }
 
 namespace displaymanager {
-    class DisplayManager;
+class DisplayManager;
 }
 
 namespace input {
@@ -32,9 +34,8 @@ public:
     // name: nom unique du raccourci
     // accelerator: combinaison de touches au format GTK (ex: "<Control>s")
     // callback: fonction à appeler lorsque le raccourci est activé
-    void registerShortcut(const std::string& name, 
-                         const std::string& accelerator, 
-                         std::function<void()> callback);
+    void registerShortcut(const std::string& name, const std::string& accelerator,
+                          std::function<void()> callback);
 
     // Désenregistre un raccourci
     void unregisterShortcut(const std::string& name);
@@ -60,11 +61,11 @@ private:
 
     // Méthodes utilitaires
     bool parseAccelerator(const std::string& accel, guint& key, Gdk::ModifierType& mods) const;
-    
+
     // Gestionnaire d'événements clavier
     bool onKeyPressed(GdkEventKey* event);
 };
 
-} // namespace input
+}  // namespace input
 
-#endif // INPUT_MANAGER_H
+#endif  // INPUT_MANAGER_H

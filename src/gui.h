@@ -5,11 +5,11 @@
 
 class GUI {
     CursorManager* cursorManager;
+
 public:
     GUI(CursorManager* cm);
     void show();
     void update();
 };
 
-#endif // GUI_H
-
+#endif  // GUI_H

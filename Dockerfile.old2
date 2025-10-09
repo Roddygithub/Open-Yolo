@@ -1,0 +1,49 @@
+FROM ubuntu:22.04
+
+# Arguments de construction
+ARG DEBIAN_FRONTEND=noninteractive
+ARG TZ=Europe/Paris
+
+# Variables d'environnement
+ENV \
+    # Configuration du compilateur
+    CC=gcc \
+    CXX=g++ \
+    # Optimisations de compilation
+    CFLAGS="-O2 -pipe" \
+    CXXFLAGS="-O2 -pipe" \
+    # Configuration de la locale
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    # Configuration du fuseau horaire
+    TZ=${TZ}
+
+# Mise à jour et installation des dépendances système
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Outils de base
+    build-essential \
+    cmake \
+    ninja-build \
+    pkg-config \
+    git \
+    # Dépendances GTK et X11
+    libgtkmm-3.0-dev \
+    libx11-dev \
+    libxrandr-dev \
+    libxi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Création du répertoire de travail
+WORKDIR /app
+
+# Copie des fichiers sources
+COPY . .
+
+# Construction de l'application
+RUN mkdir -p build && \
+    cd build && \
+    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release .. && \
+    cmake --build . --config Release
+
+# Commande par défaut pour exécuter l'application
+CMD ["./build/OpenYolo"]

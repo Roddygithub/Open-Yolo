@@ -5,11 +5,26 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <pwd.h>
+#include <system_error>
+#include <numeric>
+#include "openyolo/error/ErrorCodes.hpp"
 
 namespace openyolo {
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
+
+// CRC32 checksum calculation
+uint32_t crc32(const std::string& data) {
+    uint32_t crc = 0xFFFFFFFF;
+    for (char c : data) {
+        crc ^= c;
+        for (int i = 0; i < 8; ++i) {
+            crc = (crc & 1) ? (crc >> 1) ^ 0xEDB88320 : (crc >> 1);
+        }
+    }
+    return ~crc;
+}
 
 // Implémentation des méthodes de CursorProfile
 json CursorProfile::toJson() const {
@@ -29,6 +44,8 @@ json CursorProfile::toJson() const {
         }
         j["cursorMapping"] = mappingJson;
     }
+
+    j["checksum"] = crc32(j.dump());
     
     return j;
 }
@@ -91,15 +108,17 @@ bool ProfileManager::loadProfiles() {
             defaultProfile.name = "Par défaut";
             defaultProfile.theme = "Adwaita";
             m_profiles.push_back(std::move(defaultProfile));
-            saveProfileToFile(m_profiles.back());
+            if (auto err = saveProfileToFile(m_profiles.back())) {
+                LOG_ERROR("Échec de la sauvegarde du profil par défaut: " + err.message());
+            }
             return true;
         }
         
         // Charger les profils existants
         for (const auto& entry : fs::directory_iterator(m_profilesDir)) {
             if (entry.path().extension() == ".json") {
-                if (!loadProfileFromFile(entry.path())) {
-                    LOG_WARNING("Échec du chargement du profil: " + entry.path().string());
+                if (auto err = loadProfileFromFile(entry.path())) {
+                    LOG_WARNING("Échec du chargement du profil: " + entry.path().string() + " (" + err.message() + ")");
                 }
             }
         }
@@ -110,7 +129,9 @@ bool ProfileManager::loadProfiles() {
             defaultProfile.name = "Par défaut";
             defaultProfile.theme = "Adwaita";
             m_profiles.push_back(std::move(defaultProfile));
-            saveProfileToFile(m_profiles.back());
+            if (auto err = saveProfileToFile(m_profiles.back())) {
+                LOG_ERROR("Échec de la sauvegarde du profil par défaut: " + err.message());
+            }
         }
         
         // Activer le premier profil par défaut
@@ -124,45 +145,59 @@ bool ProfileManager::loadProfiles() {
     }
 }
 
-bool ProfileManager::loadProfileFromFile(const fs::path& filePath) {
+std::error_code ProfileManager::loadProfileFromFile(const fs::path& filePath) {
     try {
         std::ifstream file(filePath);
         if (!file.is_open()) {
             LOG_ERROR("Impossible d'ouvrir le fichier de profil: " + filePath.string());
-            return false;
+            return make_error_code(ErrorCode::FileNotFound);
         }
         
         json j;
         file >> j;
+
+        // Verify checksum
+        if (j.contains("checksum")) {
+            uint32_t checksum = j["checksum"].get<uint32_t>();
+            j.erase("checksum");
+            if (checksum != crc32(j.dump())) {
+                return make_error_code(ErrorCode::ProfileCorrupted);
+            }
+        } else {
+            // For older profiles without checksum
+        }
         
         CursorProfile profile = CursorProfile::fromJson(j);
         m_profiles.push_back(std::move(profile));
         
         LOG_DEBUG("Profil chargé: " + filePath.string());
-        return true;
+        return make_error_code(ErrorCode::Success);
+    } catch (const json::parse_error& e) {
+        LOG_ERROR("Erreur de parsing JSON dans le profil " + filePath.string() + ": " + e.what());
+        return make_error_code(ErrorCode::ProfileCorrupted);
     } catch (const std::exception& e) {
         LOG_ERROR("Erreur lors du chargement du profil " + filePath.string() + ": " + e.what());
-        return false;
+        return make_error_code(ErrorCode::ProfileLoadFailed);
     }
 }
 
-bool ProfileManager::saveProfileToFile(const CursorProfile& profile) const {
+std::error_code ProfileManager::saveProfileToFile(const CursorProfile& profile) const {
     try {
         fs::path filePath = getProfilePath(profile.name);
         std::ofstream file(filePath);
         if (!file.is_open()) {
             LOG_ERROR("Impossible de créer le fichier de profil: " + filePath.string());
-            return false;
+            return make_error_code(ErrorCode::ProfileSaveFailed);
         }
         
         json j = profile.toJson();
-        file << j.dump(4); // Indentation de 4 espaces pour une meilleure lisibilité
+        file << j.dump(4);
         
         LOG_DEBUG("Profil sauvegardé: " + filePath.string());
-        return true;
+        return make_error_code(ErrorCode::Success);
     } catch (const std::exception& e) {
         LOG_ERROR("Erreur lors de la sauvegarde du profil: " + std::string(e.what()));
-        return false;
+        return make_error_code(ErrorCode::ProfileSaveFailed);
     }
 }
 
@@ -189,7 +224,6 @@ bool ProfileManager::createProfile(const std::string& name) {
         return false;
     }
     
-    // Vérifier si un profil avec ce nom existe déjà
     auto it = std::find_if(m_profiles.begin(), m_profiles.end(),
         [&name](const CursorProfile& p) { return p.name == name; });
     
@@ -198,15 +232,14 @@ bool ProfileManager::createProfile(const std::string& name) {
         return false;
     }
     
-    // Créer un nouveau profil basé sur le profil actuel ou avec des valeurs par défaut
     CursorProfile newProfile;
     if (m_activeProfileIndex >= 0 && m_activeProfileIndex < static_cast<int>(m_profiles.size())) {
         newProfile = m_profiles[m_activeProfileIndex];
     }
     newProfile.name = name;
     
-    // Sauvegarder le nouveau profil
-    if (!saveProfileToFile(newProfile)) {
+    if (auto err = saveProfileToFile(newProfile)) {
+        LOG_ERROR("Échec de la sauvegarde du nouveau profil: " + err.message());
         return false;
     }
     
@@ -217,40 +250,37 @@ bool ProfileManager::createProfile(const std::string& name) {
     return true;
 }
 
-bool ProfileManager::deleteProfile(int index) {
+std::error_code ProfileManager::deleteProfile(int index) {
     if (index < 0 || index >= static_cast<int>(m_profiles.size())) {
         LOG_ERROR("Index de profil invalide: " + std::to_string(index));
-        return false;
+        return make_error_code(ErrorCode::InvalidArgument);
     }
     
     if (m_profiles.size() <= 1) {
         LOG_ERROR("Impossible de supprimer le dernier profil");
-        return false;
+        return make_error_code(ErrorCode::OperationNotPermitted);
     }
     
     const std::string profileName = m_profiles[index].name;
     fs::path filePath = getProfilePath(profileName);
     
-    // Supprimer le fichier de profil
     try {
         if (fs::exists(filePath)) {
             fs::remove(filePath);
         }
     } catch (const std::exception& e) {
         LOG_ERROR("Échec de la suppression du fichier de profil " + filePath.string() + ": " + e.what());
-        return false;
+        return make_error_code(ErrorCode::SystemError);
     }
     
-    // Supprimer le profil de la liste
     m_profiles.erase(m_profiles.begin() + index);
     
-    // Ajuster l'index du profil actif si nécessaire
     if (m_activeProfileIndex >= index) {
         m_activeProfileIndex = std::max(0, m_activeProfileIndex - 1);
     }
     
     LOG_INFO("Profil supprimé: " + profileName);
-    return true;
+    return make_error_code(ErrorCode::Success);
 }
 
 bool ProfileManager::saveCurrentProfile() {
@@ -259,11 +289,79 @@ bool ProfileManager::saveCurrentProfile() {
         return false;
     }
     
-    return saveProfileToFile(m_profiles[m_activeProfileIndex]);
+    if (auto err = saveProfileToFile(m_profiles[m_activeProfileIndex])) {
+        LOG_ERROR("Échec de la sauvegarde du profil actuel: " + err.message());
+        return false;
+    }
+    return true;
+}
+
+std::error_code ProfileManager::importProfile(const std::string& filePath) {
+    try {
+        std::ifstream file(filePath);
+        if (!file.is_open()) {
+            return make_error_code(ErrorCode::FileNotFound);
+        }
+
+        json j;
+        file >> j;
+
+        // Verify checksum
+        if (j.contains("checksum")) {
+            uint32_t checksum = j["checksum"].get<uint32_t>();
+            j.erase("checksum");
+            if (checksum != crc32(j.dump())) {
+                return make_error_code(ErrorCode::ProfileCorrupted);
+            }
+        } else {
+            // For older profiles without checksum
+        }
+
+        CursorProfile profile = CursorProfile::fromJson(j);
+
+        // Check if a profile with this name already exists
+        auto it = std::find_if(m_profiles.begin(), m_profiles.end(),
+            [&](const CursorProfile& p) { return p.name == profile.name; });
+
+        if (it != m_profiles.end()) {
+            // Overwrite existing profile
+            *it = profile;
+        } else {
+            m_profiles.push_back(std::move(profile));
+        }
+
+        return saveProfileToFile(profile);
+    } catch (const std::exception& e) {
+        LOG_ERROR("Error importing profile: " + std::string(e.what()));
+        return make_error_code(ErrorCode::ProfileLoadFailed);
+    }
+}
+
+std::error_code ProfileManager::exportProfile(const std::string& profileName, const std::string& filePath) {
+    auto it = std::find_if(m_profiles.begin(), m_profiles.end(),
+        [&](const CursorProfile& p) { return p.name == profileName; });
+
+    if (it == m_profiles.end()) {
+        return make_error_code(ErrorCode::ProfileNotFound);
+    }
+
+    try {
+        std::ofstream file(filePath);
+        if (!file.is_open()) {
+            return make_error_code(ErrorCode::ProfileSaveFailed);
+        }
+
+        json j = it->toJson();
+        file << j.dump(4);
+
+        return make_error_code(ErrorCode::Success);
+    } catch (const std::exception& e) {
+        LOG_ERROR("Error exporting profile: " + std::string(e.what()));
+        return make_error_code(ErrorCode::ProfileSaveFailed);
+    }
 }
 
 fs::path ProfileManager::getProfilePath(const std::string& profileName) const {
-    // Créer un nom de fichier valide à partir du nom du profil
     std::string fileName = profileName;
     std::replace_if(fileName.begin(), fileName.end(),
         [](char c) { return !std::isalnum(c) && c != '-' && c != '_'; }, '_');

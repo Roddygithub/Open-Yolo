@@ -15,9 +15,9 @@ echo ""
 
 # Vérifier que l'application est compilée
 if [ ! -f "build/src/OpenYolo" ]; then
-    echo "❌ Erreur : L'application n'est pas compilée"
-    echo "Exécutez d'abord : make build"
-    exit 1
+  echo "❌ Erreur : L'application n'est pas compilée"
+  echo "Exécutez d'abord : make build"
+  exit 1
 fi
 
 echo "📸 Captures nécessaires :"
@@ -70,32 +70,32 @@ echo ""
 echo "📁 Vérification des fichiers..."
 
 CAPTURES=(
-    "main-window.png:Interface principale"
-    "cursor-active.png:Curseur actif"
-    "effects-tab.png:Onglet Effets"
-    "shortcuts-tab.png:Onglet Raccourcis"
+  "main-window.png:Interface principale"
+  "cursor-active.png:Curseur actif"
+  "effects-tab.png:Onglet Effets"
+  "shortcuts-tab.png:Onglet Raccourcis"
 )
 
 FOUND=0
 MISSING=0
 
 for capture in "${CAPTURES[@]}"; do
-    IFS=':' read -r file desc <<< "$capture"
-    if [ -f "$SCREENSHOTS_DIR/$file" ]; then
-        echo "✅ $desc : $file"
-        ((FOUND++))
-    else
-        echo "⚠️  $desc : $file (manquant)"
-        ((MISSING++))
-    fi
+  IFS=':' read -r file desc <<<"$capture"
+  if [ -f "$SCREENSHOTS_DIR/$file" ]; then
+    echo "✅ $desc : $file"
+    ((FOUND++))
+  else
+    echo "⚠️  $desc : $file (manquant)"
+    ((MISSING++))
+  fi
 done
 
 echo ""
 if [ $MISSING -eq 0 ]; then
-    echo "🎉 Toutes les captures sont prêtes !"
+  echo "🎉 Toutes les captures sont prêtes !"
 else
-    echo "⚠️  $MISSING capture(s) manquante(s)"
-    echo "Vous pouvez les ajouter plus tard dans $SCREENSHOTS_DIR/"
+  echo "⚠️  $MISSING capture(s) manquante(s)"
+  echo "Vous pouvez les ajouter plus tard dans $SCREENSHOTS_DIR/"
 fi
 
 echo ""

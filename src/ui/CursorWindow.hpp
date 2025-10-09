@@ -1,6 +1,7 @@
 #pragma once
 
 #include <gtkmm.h>
+
 #include <input/CursorManager.hpp>
 
 namespace ui {
@@ -18,12 +19,16 @@ protected:
     void on_apply_clicked();
     void on_save_profile_clicked();
     void on_use_system_toggled();
+    void on_import_clicked();
+    void on_export_clicked();
 
     // Widgets
     Gtk::Box m_mainBox;
     Gtk::Box m_profileBox;
     Gtk::ComboBoxText m_profileCombo;
     Gtk::Button m_saveProfileBtn;
+    Gtk::Button m_importBtn;
+    Gtk::Button m_exportBtn;
     Gtk::Frame m_cursorFrame;
     Gtk::ListBox m_cursorList;
     Gtk::Box m_controlBox;
@@ -43,4 +48,4 @@ protected:
     void update_sensitivity();
 };
 
-} // namespace ui
+}  // namespace ui

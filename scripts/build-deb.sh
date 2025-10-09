@@ -36,7 +36,7 @@ make -j"$(nproc)"
 make DESTDIR="${BUILD_DIR}" install
 
 # Créer le fichier de contrôle
-cat > "${DEBIAN_DIR}/control" << EOF
+cat > "${DEBIAN_DIR}/control" << 'EOF'
 Package: ${PACKAGE_NAME}
 Version: ${PACKAGE_VERSION}
 Section: utils

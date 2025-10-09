@@ -1,0 +1,60 @@
+# OpenYolo
+
+Un gestionnaire de curseurs personnalisables pour Linux, inspiré de Yolo Mouse.
+
+## 🚀 Prérequis
+
+- Linux (testé sur Ubuntu 22.04)
+- GTK+ 3.0 ou supérieur
+- X11
+- CMake 3.10 ou supérieur
+- Compilateur C++ avec support C++17
+- Git
+
+## 🛠 Installation
+
+### Depuis les sources
+
+1. **Cloner le dépôt** :
+   ```bash
+   git clone https://github.com/Roddygithub/Open-Yolo.git
+   cd Open-Yolo
+   ```
+
+2. **Compiler le projet** :
+   ```bash
+   ./scripts/build.sh
+   ```
+
+3. **Lancer l'application** :
+   ```bash
+   ./scripts/exec.sh
+   ```
+
+## 🐳 Utilisation avec Docker
+
+1. **Construire l'image** :
+   ```bash
+   docker-compose build
+   ```
+
+2. **Lancer l'application** :
+   ```bash
+   xhost +local:docker
+   docker-compose up
+   ```
+
+## 📦 Dépendances
+
+- libgtkmm-3.0-dev
+- libx11-dev
+- libxrandr-dev
+- libxi-dev
+
+## 📝 Licence
+
+Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
+
+## 🤝 Contribution
+
+Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou une pull request.

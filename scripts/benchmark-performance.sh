@@ -15,8 +15,8 @@ echo ""
 
 # Vérifier que le binaire existe
 if [ ! -f "build/src/OpenYolo" ]; then
-    echo -e "${YELLOW}⚠ Binaire non trouvé, compilation...${NC}"
-    make build
+  echo -e "${YELLOW}⚠ Binaire non trouvé, compilation...${NC}"
+  make build
 fi
 
 BINARY="build/src/OpenYolo"
@@ -49,30 +49,30 @@ echo -e "${YELLOW}[4/5]${NC} Consommation mémoire (estimation)..."
 APP_PID=$!
 sleep 2
 
-if ps -p $APP_PID > /dev/null; then
-    MEM_RSS=$(ps -o rss= -p $APP_PID | awk '{print $1/1024}')
-    MEM_VSZ=$(ps -o vsz= -p $APP_PID | awk '{print $1/1024}')
-    echo "  RSS : ${MEM_RSS} MB"
-    echo "  VSZ : ${MEM_VSZ} MB"
-    
-    # Mesurer CPU pendant 5 secondes
-    echo ""
-    echo -e "${YELLOW}[5/5]${NC} Consommation CPU (5 secondes)..."
-    CPU_SAMPLES=()
-    for i in {1..5}; do
-        CPU=$(ps -o %cpu= -p $APP_PID | awk '{print $1}')
-        CPU_SAMPLES+=($CPU)
-        echo "  Sample $i : ${CPU}%"
-        sleep 1
-    done
-    
-    # Calculer la moyenne
-    CPU_AVG=$(echo "${CPU_SAMPLES[@]}" | awk '{sum=0; for(i=1;i<=NF;i++) sum+=$i; print sum/NF}')
-    echo "  Moyenne : ${CPU_AVG}%"
-    
-    kill $APP_PID 2>/dev/null || true
+if ps -p $APP_PID >/dev/null; then
+  MEM_RSS=$(ps -o rss= -p $APP_PID | awk '{print $1/1024}')
+  MEM_VSZ=$(ps -o vsz= -p $APP_PID | awk '{print $1/1024}')
+  echo "  RSS : ${MEM_RSS} MB"
+  echo "  VSZ : ${MEM_VSZ} MB"
+
+  # Mesurer CPU pendant 5 secondes
+  echo ""
+  echo -e "${YELLOW}[5/5]${NC} Consommation CPU (5 secondes)..."
+  CPU_SAMPLES=()
+  for i in {1..5}; do
+    CPU=$(ps -o %cpu= -p $APP_PID | awk '{print $1}')
+    CPU_SAMPLES+=($CPU)
+    echo "  Sample $i : ${CPU}%"
+    sleep 1
+  done
+
+  # Calculer la moyenne
+  CPU_AVG=$(echo "${CPU_SAMPLES[@]}" | awk '{sum=0; for(i=1;i<=NF;i++) sum+=$i; print sum/NF}')
+  echo "  Moyenne : ${CPU_AVG}%"
+
+  kill $APP_PID 2>/dev/null || true
 else
-    echo "  ⚠ Application non démarrée"
+  echo "  ⚠ Application non démarrée"
 fi
 
 echo ""
@@ -88,11 +88,11 @@ echo "  • CPU moyen : ${CPU_AVG}%"
 echo ""
 
 # Évaluation
-if (( $(echo "$CPU_AVG < 5" | bc -l) )); then
-    echo -e "${GREEN}✅ Performances excellentes !${NC}"
-elif (( $(echo "$CPU_AVG < 10" | bc -l) )); then
-    echo -e "${GREEN}✅ Performances bonnes${NC}"
+if (($(echo "$CPU_AVG < 5" | bc -l))); then
+  echo -e "${GREEN}✅ Performances excellentes !${NC}"
+elif (($(echo "$CPU_AVG < 10" | bc -l))); then
+  echo -e "${GREEN}✅ Performances bonnes${NC}"
 else
-    echo -e "${YELLOW}⚠ Performances à optimiser${NC}"
+  echo -e "${YELLOW}⚠ Performances à optimiser${NC}"
 fi
 echo ""

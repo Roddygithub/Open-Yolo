@@ -1,14 +1,16 @@
-#include "input/backends/WaylandBackend.hpp"
-#include "input/InputManager.hpp"
-#include <gtest/gtest.h>
-#include <glibmm.h>
-#include <glibmm/main.h>
-#include <glibmm/init.h>
-#include <glibmm/refptr.h>
 #include <giomm/init.h>
+#include <glibmm.h>
+#include <glibmm/init.h>
+#include <glibmm/main.h>
+#include <glibmm/refptr.h>
+#include <gtest/gtest.h>
+
+#include <chrono>
 #include <iostream>
 #include <memory>
-#include <chrono>
+
+#include "input/InputManager.hpp"
+#include "input/backends/WaylandBackend.hpp"
 
 // --- Test Fixtures ---
 
@@ -16,7 +18,7 @@
 class MockWaylandBackend : public input::WaylandBackend {
 public:
     MockWaylandBackend(input::InputManager* manager) : input::WaylandBackend(manager) {}
-    
+
     int recreate_call_count = 0;
     int close_call_count = 0;
     bool throw_on_recreate = false;
@@ -59,9 +61,10 @@ protected:
     void run_mainloop_for_seconds(int seconds) {
         auto context = mainloop->get_context();
         auto start = std::chrono::steady_clock::now();
-        
-        while (std::chrono::duration_cast<std::chrono::seconds>(
-                std::chrono::steady_clock::now() - start).count() < seconds) {
+
+        while (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() -
+                                                                start)
+                   .count() < seconds) {
             context->iteration(true);
         }
     }
@@ -124,15 +127,15 @@ TEST_F(WaylandBackendUnitTest, ErrorHandlingTest) {
     // Tester le callback d'erreur
     bool error_callback_called = false;
     std::string error_message;
-    
+
     mock_backend->addTestErrorCallback([&](const std::string& msg) {
         error_callback_called = true;
         error_message = msg;
     });
-    
+
     // Tester la gestion des erreurs
     mock_backend->throw_on_recreate = true;
-    
+
     try {
         mock_backend->forceRecreateSession();
         FAIL() << "Expected an exception to be thrown";
@@ -140,7 +143,7 @@ TEST_F(WaylandBackendUnitTest, ErrorHandlingTest) {
         // Vérifier que l'exception a le bon message
         EXPECT_STREQ(e.what(), "Mock recreateSession failed");
     }
-    
+
     // Vérifier que le callback d'erreur a été appelé
     EXPECT_TRUE(error_callback_called) << "Error callback was not called";
     EXPECT_FALSE(error_message.empty()) << "Error message should not be empty";
@@ -154,19 +157,16 @@ TEST_F(WaylandBackendIntegrationTest, DISABLED_RegisterShortcut) {
     } catch (const std::exception& e) {
         GTEST_SKIP() << "Skipping test - Wayland backend initialization failed: " << e.what();
     }
-    
+
     // Test avec des paramètres valides
     bool callback_called = false;
     try {
-        backend->registerShortcut(
-            "test_shortcut",
-            "<Control><Shift>t",
-            [&]() { callback_called = true; }
-        );
-        
+        backend->registerShortcut("test_shortcut", "<Control><Shift>t",
+                                  [&]() { callback_called = true; });
+
         // Vérifier que le callback a été enregistré
         SUCCEED() << "Shortcut registered successfully";
-        
+
         // Nettoyage
         backend->unregisterShortcut("test_shortcut");
     } catch (const std::exception& e) {
@@ -177,20 +177,21 @@ TEST_F(WaylandBackendIntegrationTest, DISABLED_RegisterShortcut) {
 // Ce test nécessite un environnement Wayland actif
 TEST_F(WaylandBackendIntegrationTest, DISABLED_FullLifecycle) {
     // Créer un InputManager factice pour le test
-    std::cout << "NOTE: This test requires a Wayland session with a running portal service." << std::endl;
+    std::cout << "NOTE: This test requires a Wayland session with a running portal service."
+              << std::endl;
 
     backend->setMinLogLevel(input::WaylandBackend::LogLevel::Debug);
-    
+
     bool initialized = false;
     int state_changes = 0;
-    
+
     // Enregistrer un callback pour les changements d'état
-    backend->addStateChangeCallback([&](input::WaylandBackend::SessionState old_state, 
-                                     input::WaylandBackend::SessionState new_state) {
+    backend->addStateChangeCallback([&](input::WaylandBackend::SessionState old_state,
+                                        input::WaylandBackend::SessionState new_state) {
         state_changes++;
-        std::cout << "State changed from " << static_cast<int>(old_state) 
-                  << " to " << static_cast<int>(new_state) << std::endl;
-                  
+        std::cout << "State changed from " << static_cast<int>(old_state) << " to "
+                  << static_cast<int>(new_state) << std::endl;
+
         if (new_state == input::WaylandBackend::SessionState::Connected && mainloop->is_running()) {
             mainloop->quit();
         }
@@ -203,9 +204,10 @@ TEST_F(WaylandBackendIntegrationTest, DISABLED_FullLifecycle) {
 
         std::cout << "Waiting for D-Bus connection..." << std::endl;
         run_mainloop_for_seconds(3);
-        
+
         // Vérifier que des changements d'état ont été enregistrés
-        ASSERT_GT(state_changes, 0) << "No state changes were recorded. The backend may not have connected.";
+        ASSERT_GT(state_changes, 0)
+            << "No state changes were recorded. The backend may not have connected.";
     } catch (const std::exception& e) {
         FAIL() << "Exception in FullLifecycle test: " << e.what();
     }

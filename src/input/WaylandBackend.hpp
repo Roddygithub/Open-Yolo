@@ -1,11 +1,13 @@
 #ifndef WAYLAND_BACKEND_HPP
 #define WAYLAND_BACKEND_HPP
 
-#include "../InputBackend.hpp"
-#include <unordered_map>
-#include <memory>
-#include <giomm/dbusproxy.h>
 #include <giomm/dbusconnection.h>
+#include <giomm/dbusproxy.h>
+
+#include <memory>
+#include <unordered_map>
+
+#include "../InputBackend.hpp"
 
 namespace input {
 
@@ -13,17 +15,18 @@ namespace input {
  * @class WaylandBackend
  * @brief Implémentation du backend d'entrée pour le serveur d'affichage Wayland.
  *
- * Cette classe est responsable de la gestion des entrées (raccourcis clavier) dans un environnement Wayland
- * en utilisant le portail D-Bus XDG pour les raccourcis globaux.
+ * Cette classe est responsable de la gestion des entrées (raccourcis clavier) dans un environnement
+ * Wayland en utilisant le portail D-Bus XDG pour les raccourcis globaux.
  *
- * @details Elle gère un cycle de vie d'états (Disconnected, Connecting, Connected, Reconnecting) pour
- * assurer une connexion robuste au service D-Bus. La journalisation est effectuée dans un format
- * structuré (similaire à JSON) pour faciliter le débogage.
+ * @details Elle gère un cycle de vie d'états (Disconnected, Connecting, Connected, Reconnecting)
+ * pour assurer une connexion robuste au service D-Bus. La journalisation est effectuée dans un
+ * format structuré (similaire à JSON) pour faciliter le débogage.
  * @example
  * auto backend = std::make_unique<WaylandBackend>();
  * backend->setMinLogLevel(WaylandBackend::LogLevel::Debug);
  * backend->addStateChangeCallback([](auto oldState, auto newState) {
- *     std::cout << "State changed: " << to_string(oldState) << " -> " << to_string(newState) << std::endl;
+ *     std::cout << "State changed: " << to_string(oldState) << " -> " << to_string(newState) <<
+ * std::endl;
  * });
  */
 class WaylandBackend : public InputBackend {
@@ -61,7 +64,8 @@ public:
      * @example
      * backend->registerShortcut("screenshot", "<Control><Alt>S", []() { ... });
      */
-    bool registerShortcut(const std::string& name, const std::string& accelerator, const KeyCallback& callback) override;
+    bool registerShortcut(const std::string& name, const std::string& accelerator,
+                          const KeyCallback& callback) override;
     /**
      * @brief Supprime un raccourci enregistré.
      * @param name Nom du raccourci à supprimer.
@@ -84,7 +88,8 @@ private:
      * @param result Le résultat de l'opération asynchrone.
      * @example
      * // La connexion au signal est faite ici :
-     * m_proxy->signal_signal().connect(sigc::mem_fun(*this, &WaylandBackend::onSessionShortcutActivated));
+     * m_proxy->signal_signal().connect(sigc::mem_fun(*this,
+     * &WaylandBackend::onSessionShortcutActivated));
      */
     void onProxyCreated(Glib::RefPtr<Gio::AsyncResult>& result);
     void createPortalSession();
@@ -100,18 +105,21 @@ private:
     void scheduleReconnect();
     /**
      * @brief Ferme la session D-Bus actuelle.
-     * @note Cette méthode est idempotente et peut être appelée plusieurs fois sans effet secondaire.
+     * @note Cette méthode est idempotente et peut être appelée plusieurs fois sans effet
+     * secondaire.
      */
     void closeSession();
     /**
      * @brief Recrée la session D-Bus pour refléter la liste actuelle des raccourcis.
-     * @details Ferme la session existante et en crée une nouvelle. Si la liste des raccourcis est vide,
-     * la session est simplement fermée sans en créer une nouvelle. En cas d'échec, une reconnexion est planifiée.
+     * @details Ferme la session existante et en crée une nouvelle. Si la liste des raccourcis est
+     * vide, la session est simplement fermée sans en créer une nouvelle. En cas d'échec, une
+     * reconnexion est planifiée.
      * @throws std::runtime_error Si la recréation de la session échoue (bien que gérée en interne).
      */
     void recreateSession();
     /**
-     * @brief Convertit un accélérateur au format GTK (ex: "<Control>F10") au format du portail D-Bus ("Control+F10").
+     * @brief Convertit un accélérateur au format GTK (ex: "<Control>F10") au format du portail
+     * D-Bus ("Control+F10").
      * @param gtkAccel La chaîne de l'accélérateur au format GTK.
      * @return La chaîne de l'accélérateur convertie.
      */
@@ -140,5 +148,5 @@ private:
     std::unordered_map<Glib::ustring, ShortcutData> m_shortcuts;
 };
 
-} // namespace input
-#endif // WAYLAND_BACKEND_HPP
+}  // namespace input
+#endif  // WAYLAND_BACKEND_HPP

@@ -1,14 +1,16 @@
 #ifndef WAYLAND_BACKEND_HPP
 #define WAYLAND_BACKEND_HPP
 
-#include "../InputBackend.hpp"
 #include <giomm/dbusproxy.h>
 #include <glibmm/refptr.h>
 #include <gtkmm.h>
+
 #include <functional>
 #include <map>
 #include <memory>
 #include <string>
+
+#include "../InputBackend.hpp"
 
 namespace input {
 
@@ -20,7 +22,8 @@ public:
 
     // Implémentation de InputBackend
     bool initialize() override;
-    void registerShortcut(const std::string& name, const std::string& accelerator, std::function<void()> callback) override;
+    void registerShortcut(const std::string& name, const std::string& accelerator,
+                          std::function<void()> callback) override;
     void unregisterShortcut(const std::string& name) override;
 
 private:
@@ -33,12 +36,10 @@ private:
     };
 
 private:
-    void onSessionShortcutActivated(
-        const Glib::ustring& sender_name,
-        const Glib::ustring& signal_name,
-        const Glib::VariantContainerBase& parameters
-    );
-    
+    void onSessionShortcutActivated(const Glib::ustring& sender_name,
+                                    const Glib::ustring& signal_name,
+                                    const Glib::VariantContainerBase& parameters);
+
     void onBindShortcutsResponse(Glib::RefPtr<Gio::AsyncResult> result);
     void onSessionCreated(Glib::RefPtr<Gio::AsyncResult> result);
     // Méthodes utilitaires
@@ -48,10 +49,10 @@ private:
     void scheduleReconnect();
     void setSessionState(SessionState state);
     std::string convertToPortalShortcut(const std::string& accelerator) const;
-    
+
     // Callbacks de changement d'état
     std::vector<std::function<void(SessionState, SessionState)>> m_stateChangeCallbacks;
-    
+
     InputManager* m_manager;
     Glib::RefPtr<Gio::DBus::Connection> m_connection;
     Glib::RefPtr<Gio::DBus::Proxy> m_proxy;
@@ -64,7 +65,6 @@ private:
     bool m_initialized;
 };
 
+}  // namespace input
 
-} // namespace input
-
-#endif // WAYLAND_BACKEND_HPP
+#endif  // WAYLAND_BACKEND_HPP

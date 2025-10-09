@@ -1,196 +1,167 @@
-# Répertoires de build et d'installation
+# Fichiers de compilation
 build/
-bin/
-lib/
-install/
-
-# Fichiers objets et bibliothèques
+build-*/
 *.o
 *.a
 *.so
-*.so.*
-*.dylib
 *.dll
 *.exe
-
-# Fichiers de débogage et symboles
-*.dSYM/
-*.dylib.dSYM/
-*.so.dSYM/
+*.dylib
+*.lib
+*.dll.a
 *.pdb
-*.idb
 *.ilk
 *.exp
-*.lib
+*.sln
+*.vcxproj*
+*.xcodeproj
+*.xcworkspace
+*.sdf
+*.opensdf
+*.suo
+*.user
+*.userprefs
+*.ncb
+*.opendb
+*.db
 *.tlog
 *.log
-*.iobj
+*.idb
+*.pch
+*.ipch
 *.ipdb
+*.iobj
+*.sbr
+*.bsc
+*.sbr
 
-# Fichiers spécifiques au gestionnaire de curseurs
-resources/cursors/*.png
-!resources/cursors/README.md
+# Fichiers générés par CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+Testing/
+Makefile
+*.cmake
 
-# Fichiers de configuration utilisateur
-*.yaml
-!resources/config/default-config.yaml
+# Fichiers de couverture de code
+*.gcno
+*.gcda
+*.gcov
+coverage/
+*.lcov
 
-# Fichiers de cache et temporaires
-.cache/
-*.swp
+# Fichiers de débogage
+*.dSYM/
+*.dSYM.zip
+*.dSYM/
+
+# Fichiers temporaires
 *~
 *.bak
-*.tmp
-*.temp
+*.swp
 *.swo
-
-# Fichiers de configuration d'IDE et d'éditeurs
-.vscode/
-.idea/
-*.code-workspace
-*.sublime-workspace
-*.sublime-project
-
-# Fichiers système
 .DS_Store
 Thumbs.db
+
+# Répertoires de dépendances
+dist/
+bin/
+lib/
+include/
+share/
+
+# Environnements virtuels Python
+venv/
+env/
+ENV/
 
 # Fichiers de configuration locaux
 *.local
 .env
-.env.*
-!.env.example
+.env.local
+.env.*.local
 
-# Fichiers de compilation
-compile_commands.json
-CMakeCache.txt
-CMakeFiles/
-CMakeScripts/
-*.cmake
-Makefile
-*.ninja
-*.ninja_deps
-*.ninja_log
+# Fichiers de logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Fichiers de couverture de test
-coverage/
-*.gcda
-*.gcno
-*.gcov
+# Fichiers système
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Fichiers de l'éditeur
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# Fichiers de déploiement
+*.deb
+*.rpm
+*.tar.gz
+*.zip
+
+# Fichiers de configuration système
+*.conf
+*.ini
+*.cfg
+*.config
+
+# Fichiers de base de données locale
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# Fichiers de cache
+.cache/
+.cache/*
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Fichiers de couverture
+.coverage
+htmlcov/
+
+# Fichiers de profilage
+*.prof
+*.profdata
 
 # Fichiers de documentation générés
 docs/_build/
 docs/api/
 
-# Fichiers de package
-*.deb
-*.rpm
-*.tar.gz
-*.zip
-*.iobj
-*.ipdb
+# Fichiers de déploiement
+.pytest_cache/
+.mypy_cache/
 
-# Fichiers de sauvegarde
+# Fichiers spécifiques au projet
+*.orig
+*.rej
 *~
-*.bak
 *.swp
 *.swo
 
-# Fichiers temporaires
-*.tmp
-*.temp
+# Fichiers de configuration utilisateur
+config.ini
+*.local
 
 # Fichiers de dépendances
-dep/
+node_modules/
+bower_components/
 
-# Fichiers de configuration utilisateur
-*.userprefs
-*.user
-*.suo
-*.sln
-*.vcxproj
-*.vcxproj.filters
-*.vcxproj.user
-*.sdf
-*.opensdf
-*.VC.db
-*.VC.VC.opendb
-
-# Fichiers de cache
-.vs/
-.vscode/
-.idea/
-*.code-workspace
-
-# Fichiers vcpkg
-vcpkg/
-
-# Fichiers de sortie
+# Fichiers de build
 out/
-Release/
-Debug/
-x64/
-Win32/
-
-# Fichiers CMake
-CMakeCache.txt
-CMakeFiles/
-CMakeScripts/
-Makefile
-cmake_install.cmake
-install_manifest.txt
-compile_commands.json
-CTestTestfile.cmake
-_deps/
-.cache/
-
-# Fichiers de logs
-*.log
-
-# Fichiers de paquets
-deploy/
-*.deb
-*.rpm
-*.tar.gz
-*.zip
-
-# Fichiers de configuration locaux (à personnaliser)
-config.ini
-settings.ini
-
-# Fichiers de base de données
-*.db
-*.sqlite
-
-# Fichiers de test
-*.test
-*.out
-
-# Fichiers de couverture de code
-*.gcov
-*.gcno
-*.gcda
-
-# Fichiers de profilage
-*.prof
-*.gprof
-
-# Fichiers de documentation générés
-doc/
-html/
-latex/
-
-# Fichiers de compilation CMake
-CMakeCache.txt
-CMakeFiles/
-cmake_install.cmake
-Makefile
-install_manifest.txt
-CTestTestfile.cmake
-Testing/
-*.cmake
-
-# Fichiers de compilation spécifiques à CLion
-.idea/
-cmake-build-debug/
-cmake-build-release/
+dist-*/

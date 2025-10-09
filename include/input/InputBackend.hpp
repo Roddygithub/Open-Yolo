@@ -6,8 +6,8 @@
 #include <string>
 
 // GTKmm
-#include <gtkmm/window.h>
 #include <gdk/gdk.h>
+#include <gtkmm/window.h>
 
 namespace input {
 
@@ -47,14 +47,15 @@ public:
      * @param accelerator Chaîne de l'accélérateur (ex: "<Control>F10").
      * @param callback Fonction à appeler.
      */
-    virtual void registerShortcut(const std::string& name, const std::string& accelerator, KeyCallback callback) = 0;
-    
+    virtual void registerShortcut(const std::string& name, const std::string& accelerator,
+                                  KeyCallback callback) = 0;
+
     /**
      * @brief Désenregistre un raccourci.
      * @param name Nom du raccourci à désenregistrer.
      */
     virtual void unregisterShortcut(const std::string& name) = 0;
-    
+
     /**
      * @brief Gère un événement clavier.
      * @param keyval Code de la touche.
@@ -62,7 +63,7 @@ public:
      * @return true si l'événement a été traité, false sinon.
      */
     virtual bool handleKeyEvent(guint keyval, GdkModifierType mods) = 0;
-    
+
     /**
      * @brief Gestionnaire d'événements de touche pressée (obsolète, utiliser handleKeyEvent).
      * @param event L'événement de touche.
@@ -78,5 +79,5 @@ public:
     virtual bool shutdown() = 0;
 };
 
-} // namespace input
-#endif // INPUT_BACKEND_HPP
+}  // namespace input
+#endif  // INPUT_BACKEND_HPP

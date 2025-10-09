@@ -1,4 +1,5 @@
 #include "../../include/cursormanager/CursorManager.hpp"
+
 #include "../../include/input/CursorError.hpp"
 
 // Standard C++
@@ -25,12 +26,12 @@ public:
         try {
             // Sauvegarder l'état actuel du contexte
             cr->save();
-            
+
             // Définir la couleur et dessiner un cercle comme curseur de test
-            cr->set_source_rgba(1.0, 0.0, 0.0, 0.8); // Rouge semi-transparent
+            cr->set_source_rgba(1.0, 0.0, 0.0, 0.8);  // Rouge semi-transparent
             cr->arc(x, y, 10.0 * scale, 0.0, 2.0 * M_PI);
             cr->fill();
-            
+
             // Restaurer l'état du contexte
             cr->restore();
         } catch (const std::exception& e) {
@@ -64,19 +65,17 @@ void CursorManager::update() {
     }
 }
 
-void CursorManager::setScale(float scale) { 
+void CursorManager::setScale(float scale) {
     if (pImpl) {
-        pImpl->scale_ = scale > 0 ? scale : 1.0f; 
+        pImpl->scale_ = scale > 0 ? scale : 1.0f;
     }
 }
 
-float CursorManager::getScale() const { 
-    return pImpl ? pImpl->scale_ : 1.0f; 
-}
+float CursorManager::getScale() const { return pImpl ? pImpl->scale_ : 1.0f; }
 
-void CursorManager::setAnimationSpeed(int fps) { 
+void CursorManager::setAnimationSpeed(int fps) {
     if (pImpl) {
-        pImpl->targetFps_ = fps > 0 ? fps : 60; 
+        pImpl->targetFps_ = fps > 0 ? fps : 60;
     }
 }
 
@@ -86,17 +85,11 @@ void CursorManager::setEnabled(bool enabled) {
     }
 }
 
-bool CursorManager::isEnabled() const {
-    return pImpl ? pImpl->enabled_ : false;
-}
+bool CursorManager::isEnabled() const { return pImpl ? pImpl->enabled_ : false; }
 
-bool CursorManager::isVisible() const {
-    return pImpl ? pImpl->visible_ : false;
-}
+bool CursorManager::isVisible() const { return pImpl ? pImpl->visible_ : false; }
 
-bool CursorManager::isInitialized() const {
-    return pImpl != nullptr;
-}
+bool CursorManager::isInitialized() const { return pImpl != nullptr; }
 
 const std::string& CursorManager::getCurrentCursorPath() const {
     static const std::string empty;
@@ -108,8 +101,6 @@ void CursorManager::setCursorPath(const std::string& path) {
         pImpl->currentCursorPath_ = path;
     }
 }
-int CursorManager::getAnimationSpeed() const { 
-    return pImpl ? pImpl->targetFps_ : 60; 
-}
+int CursorManager::getAnimationSpeed() const { return pImpl ? pImpl->targetFps_ : 60; }
 
-} // namespace cursor_manager
+}  // namespace cursor_manager

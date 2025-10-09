@@ -1,0 +1,61 @@
+[flake8]
+# Nombre maximal de caractères par ligne
+max-line-length = 100
+
+# Ignorer les erreurs et avertissements spécifiques
+# E203: Espace avant ':' dans les slices (incompatible avec Black)
+# W503: Saut de ligne avant opérateur binaire (incompatible avec Black)
+# E501: Ligne trop longue (géré par max-line-length)
+# E226: Opérateur mathématique manquant des espaces (incompatible avec Black)
+ignore = E203, W503, E501, E226
+
+# Nombre maximum de caractères dans les commentaires (désactivé)
+max-complexity = 10
+exclude = .git,__pycache__,venv,env,.venv,build,dist
+per-file-ignores =
+    # Ignorer les imports non utilisés dans les fichiers __init__.py
+    __init__.py: F401
+
+# Format de sortie
+format = default
+show-source = true
+statistics = true
+count = true
+benchmark = true
+verbose = 2
+output-file = flake8.txt
+
+# Configuration spécifique à des plugins
+# Docstrings
+docstring-convention = google
+
+# Type checking
+check-typed = true
+check-untyped-defs = true
+disallow-any-generics = false
+disallow-untyped-defs = false
+disallow-incomplete-defs = false
+disallow-untyped-decorators = false
+warn-return-any = true
+warn-unused-ignores = true
+warn-no-return = true
+warn-redundant-casts = true
+warn-unused-configs = true
+warn-unreachable = true
+warn-return-any = true
+
+# Configuration pour mccabe (complexité cyclomatique)
+max-complexity = 10
+
+# Configuration pour pycodestyle
+# E203: Espace avant ':' dans les slices (incompatible avec Black)
+# W503: Saut de ligne avant opérateur binaire (incompatible avec Black)
+select = B,C,E,F,W,T4,B9
+
+# Configuration pour pyflakes
+# Ignorer les imports non utilisés dans les fichiers __init__.py
+per-file-ignores =
+    __init__.py: F401
+
+# Configuration pour mccabe (complexité cyclomatique)
+max-complexity = 10
