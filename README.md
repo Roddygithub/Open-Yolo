@@ -15,6 +15,7 @@
 
 - **[🚀 Démarrage Rapide](QUICK_START.md)** - Installation en 5 minutes
 - **[🔨 Guide de Compilation](BUILD.md)** - Compiler depuis les sources
+- **[⌨️ Raccourcis Clavier](docs/SHORTCUTS.md)** - Personnaliser les raccourcis
 - **[🧪 Guide de Tests](TESTING.md)** - Tester sur toutes les plateformes
 - **[📦 Télécharger v1.0.0](https://github.com/Roddygithub/Open-Yolo/releases/latest)** - Packages prêts à installer
 
@@ -28,14 +29,94 @@
 - ✅ **Documentation complète** : Guides d'installation, compilation et tests
 
 ### Principales fonctionnalités
-- 🖱️ Curseurs personnalisés animés (GIF ou images)
-- 🖥️ Support multi-écran avancé
-- 🎨 Compatible avec les écrans haute densité (HiDPI)
-- ⚡ Rendu GPU optimisé avec OpenGL
-- ⌨️ Raccourcis clavier personnalisables
-- 🎛️ Interface graphique de configuration intuitive
-- 🔄 Mise à jour en temps réel des paramètres
-- 📦 Installation simple via des paquets natifs
+- 🖱️ **Gestion avancée des curseurs**
+  - Remplacement des curseurs système
+  - Support des formats PNG, XPM, XBM avec transparence
+  - Gestion des points chauds (hotspots)
+  - Prévisualisation en temps réel
+  - Profils de curseurs personnalisables
+  - Support des curseurs thématiques
+
+- 🎛️ **Interface utilisateur intuitive**
+  - Sélection visuelle des curseurs
+  - Éditeur intégré des points chauds
+  - Gestion des profils (création, édition, suppression)
+  - Aperçu en direct des modifications
+  - Support du glisser-déposer pour les fichiers de curseurs
+
+- 🖥️ **Compatibilité multi-environnements**
+  - Support natif X11
+  - Support expérimental Wayland
+  - Compatible avec la plupart des environnements de bureau (GNOME, KDE, Xfce, etc.)
+  - Support des écrans haute densité (HiDPI)
+  - Gestion multi-écrans
+
+- ⚙️ **Fonctionnalités avancées**
+  - Rendu GPU optimisé
+  - Faible consommation de ressources
+  - Mise à jour en temps réel
+  - Import/export de profils
+  - Raccourcis clavier personnalisables
+  - Scripting et automatisation via interface en ligne de commande
+
+## 🚀 Installation Rapide
+
+### Installation à partir des sources
+
+```bash
+# Cloner le dépôt
+git clone https://github.com/Roddygithub/Open-Yolo.git
+cd Open-Yolo
+
+# Créer un répertoire de construction
+mkdir build && cd build
+
+# Configurer la construction
+cmake .. -DCMAKE_INSTALL_PREFIX=/usr
+
+# Compiler
+make -j$(nproc)
+
+# Installer (nécessite les droits root)
+sudo make install
+```
+
+### Installation des dépendances
+
+#### Pour les distributions basées sur Debian/Ubuntu
+```bash
+sudo apt update
+sudo apt install -y git cmake build-essential libgtkmm-3.0-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev
+```
+
+#### Pour les distributions basées sur Arch Linux
+```bash
+sudo pacman -S --needed git cmake base-devel gtkmm3 xorg-xcursor xorg-xrandr xorg-xinerama
+```
+
+## 🎮 Utilisation de base
+
+### Lancer l'application
+
+```bash
+open-yolo
+```
+
+### Gestion des profils de curseurs
+
+1. **Créer un nouveau profil** :
+   - Cliquez sur "Nouveau profil" dans la barre d'outils
+   - Donnez un nom à votre profil
+   - Sélectionnez les curseurs à personnaliser
+
+2. **Modifier un curseur** :
+   - Sélectionnez un profil existant
+   - Double-cliquez sur un curseur pour le modifier
+   - Utilisez l'outil de point chaud pour définir le point de clic
+
+3. **Appliquer les modifications** :
+   - Cliquez sur "Appliquer" pour activer les changements
+   - Les modifications sont visibles immédiatement
 
 ## 📋 Prérequis
 
@@ -71,27 +152,23 @@ sudo apt-get install -y \
       libglew-dev \
       libgif-dev \
       xorg-dev \
+      wayland-protocols \
       libx11-xcb-dev \
       libwayland-dev \
-      libxkbcommon-dev
-  
-  # Pour les distributions basées sur Fedora
-  sudo dnf install -y \
-      gcc-c++ \
-      cmake \
-      git \
-      pkgconf-pkg-config \
-      gtkmm30-devel \
-      SDL2-devel \
-      SDL2_image-devel \
-      mesa-libGL-devel \
-      glew-devel \
-      giflib-devel \
-      xorg-x11-server-devel \
-      libxcb-devel \
-      wayland-devel \
-      libxkbcommon-devel
-  ```
+      libxkbcommon-dev \
+      libcairo2-dev \
+      libcairomm-1.0-dev
+```
+
+#### Fedora/RHEL
+```bash
+sudo dnf install -y \
+    gcc-c++ cmake ninja-build pkgconf-pkg-config git \
+    gtkmm30-devel SDL2-devel SDL2_image-devel \
+    mesa-libGL-devel glew-devel giflib-devel \
+    xorg-x11-server-devel wayland-protocols-devel libxcb-devel \
+    wayland-devel libxkbcommon-devel cairo-devel cairomm-devel
+```
 
 ### ⚠️ Compatibilité
 Ce projet est conçu spécifiquement pour les environnements Linux et utilise des API système spécifiques à Linux. Le support d'autres systèmes d'exploitation n'est pas prévu.

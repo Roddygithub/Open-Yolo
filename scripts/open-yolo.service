@@ -1,0 +1,15 @@
+[Unit]
+Description=Open-Yolo Cursor Manager
+After=network.target display-manager.service
+
+[Service]
+Type=simple
+User=%i
+Environment=DISPLAY=:0
+Environment=XDG_RUNTIME_DIR=/run/user/$(id -u)
+ExecStart=/usr/bin/open-yolo --daemon
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=graphical.target

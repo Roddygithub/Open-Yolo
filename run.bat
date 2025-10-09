@@ -62,7 +62,7 @@ if "%~1"=="run" (
 if "%~1"=="debug" (
     echo Lancement du mode débogage...
     echo Utilisez 'make' pour recompiler et './bin/OpenYolo' pour lancer l'application
-    %DOCKER_COMPOSE_CMD% run --service-ports open-yolo-debug //bin/bash
+    %DOCKER_COMPOSE_CMD% run --service-ports open-yolo-debug /bin/bash
     goto :eof
 )
 

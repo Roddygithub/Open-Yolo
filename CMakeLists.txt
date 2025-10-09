@@ -7,11 +7,48 @@ project(OpenYolo
     LANGUAGES CXX C
 )
 
+# Configuration des options
+option(BUILD_TESTS "Build the test suite" OFF)  # Désactivé temporairement
+option(BUILD_EXAMPLES "Build examples" OFF)
+option(ENABLE_LOGGING "Enable debug logging" ON)
+option(ENABLE_COVERAGE "Enable code coverage" OFF)
+option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
+option(ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)
+option(ENABLE_LTO "Enable Link Time Optimization" ON)
+option(ENABLE_UNITY_BUILD "Enable Unity builds for faster compilation" ON)
+
+# Configuration des chemins d'inclusion
+include_directories(${CMAKE_SOURCE_DIR}/include)
+include_directories(${CMAKE_SOURCE_DIR}/src)
+
+# Recherche des dépendances avec pkg-config
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(CAIROMM REQUIRED cairomm-1.0)
+pkg_check_modules(GTKMM3 REQUIRED gtkmm-3.0)
+pkg_check_modules(GDKMM3 REQUIRED gdk-3.0)
+pkg_check_modules(GLIBMM2_4 REQUIRED glibmm-2.4)
+pkg_check_modules(SIGC2 REQUIRED sigc++-2.0)
+
+# Afficher les chemins trouvés
+message(STATUS "CairoMM include dirs: ${CAIROMM_INCLUDE_DIRS}")
+message(STATUS "GTKMM3 include dirs: ${GTKMM3_INCLUDE_DIRS}")
+message(STATUS "GDKMM3 include dirs: ${GDKMM3_INCLUDE_DIRS}")
+
 # Set default build type to Debug if not specified
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build" FORCE)
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
+
+# Ajout du répertoire cmake au chemin de recherche des modules
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+
+# Configuration C++
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Windows-specific settings
 if(WIN32)
@@ -47,12 +84,11 @@ if(WIN32)
     
     # Disable Unix-specific options
     set(UNIX OFF)
-    set(ENABLE_LTO OFF)
     set(ENABLE_COVERAGE OFF)
     
     message(STATUS "Windows build detected")
 else()
-    # Original Linux-specific settings
+    # Unix/Linux specific settings
     set(UNIX ON)
     message(STATUS "Unix/Linux build detected")
     
@@ -62,59 +98,53 @@ else()
         message(STATUS "Arch Linux/CachyOS detected")
         add_definitions(-DARCH_LINUX)
     endif()
+    
+    # Détection de X11 et Wayland
+    find_package(X11)
+    if(X11_FOUND)
+        message(STATUS "X11 support enabled")
+        add_definitions(-DX11_ENABLED)
+        
+        # Détection de Wayland
+        pkg_check_modules(WAYLAND_CLIENT wayland-client)
+        pkg_check_modules(WAYLAND_EGL wayland-egl)
+        pkg_check_modules(WAYLAND_CURSOR wayland-cursor)
+        pkg_check_modules(XKBCOMMON xkbcommon)
+        
+        if(WAYLAND_CLIENT_FOUND AND WAYLAND_EGL_FOUND AND WAYLAND_CURSOR_FOUND AND XKBCOMMON_FOUND)
+            message(STATUS "Wayland support enabled")
+            add_definitions(-DHAVE_WAYLAND)
+        else()
+            message(STATUS "Wayland support disabled - required libraries not found")
+        endif()
+    endif()
 endif()
 
-# Ajout du répertoire cmake au chemin de recherche des modules
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
-
-# Configuration C++
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-# Options de construction
-option(ENABLE_LOGGING "Activer les logs de débogage" ON)
-option(ENABLE_WARNINGS_AS_ERRORS "Traiter les avertissements comme des erreurs" OFF)  # Disabled by default on Windows
-option(BUILD_TESTS "Construire les tests unitaires" OFF)
-option(ENABLE_COVERAGE "Activer la couverture de code" OFF)
-option(ENABLE_ASAN "Activer AddressSanitizer" OFF)
-option(ENABLE_UNITY_BUILD "Activer les builds Unity pour une compilation plus rapide" ON)
-
-# Compiler detection and settings
+# Configuration du compilateur
 if(MSVC)
     # MSVC compiler settings
     add_compile_options(
         $<$<CONFIG:Debug>:/Od /Zi>  # Debug info and optimizations
         $<$<CONFIG:Release>:/O2>    # Optimize for speed
-        /W4                        # Warning level 4
-        /WX-                       # Don't treat warnings as errors by default
-        /EHsc                      # C++ exceptions
-        /MP                        # Multi-processor compilation
     )
     
-    # Disable specific warnings that are too noisy
+    # Enable parallel builds
+    add_compile_options(/MP)
+    
+    # Disable some common warnings
     add_compile_options(
         /wd4251  # class 'std::XXX' needs to have dll-interface
         /wd4275  # non dll-interface class used as base for dll-interface class
     )
     
-    # Set Windows SDK version if not set
-    if(NOT CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION)
-        set(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION "10.0.19041.0")
-    endif()
-    
     # Use Unicode character set
     add_definitions(-DUNICODE -D_UNICODE)
-    
-    # Disable min/max macros that conflict with std::min/max
-    add_definitions(-DNOMINMAX)
     
     # Disable some deprecated warnings for external libraries
     add_definitions(-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
     
     message(STATUS "Using MSVC compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+    
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     # GCC compiler settings
     if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "13.2.1")
@@ -164,42 +194,6 @@ if(ENABLE_LTO AND NOT WIN32)  # Disable LTO on Windows by default as it can caus
     endif()
 endif()
 
-# Configuration des avertissements
-if(MSVC)
-    add_compile_options(/W4 /WX)
-    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-else()
-    add_compile_options(
-        -Wall 
-        -Wextra 
-        -Wno-pedantic 
-        -Wno-conversion 
-        -Wno-sign-conversion
-        -Wno-deprecated-declarations
-    )
-    # Désactiver temporairement les avertissements traités comme des erreurs
-    # if(ENABLE_WARNINGS_AS_ERRORS)
-    #     add_compile_options(-Werror)
-    # endif()
-    
-    # Optimisation LTO (Link Time Optimization)
-    if(ENABLE_LTO)
-        include(CheckIPOSupported)
-        check_ipo_supported(RESULT LTO_SUPPORTED OUTPUT output)
-        if(LTO_SUPPORTED)
-            set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-            message(STATUS "LTO activé")
-        else()
-            message(STATUS "LTO non supporté: ${output}")
-        endif()
-    endif()
-endif()
-
-if(ENABLE_UNITY_BUILD)
-    set(CMAKE_UNITY_BUILD ON)
-    message(STATUS "Builds Unity activés")
-endif()
-
 # Désactiver les avertissements de dépréciation pour GTKmm
 add_definitions(-DGTKMM_DISABLE_DEPRECATED)
 add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-declarations>)
@@ -208,6 +202,7 @@ add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-declarations>)
 if(WIN32)
     # Windows-specific package finding
     find_package(OpenGL REQUIRED)
+    find_package(CURL REQUIRED)
     
     # Set paths to your GTK and SDL2 installations
     set(GTK3_PATH "C:/gtkmm64" CACHE PATH "Path to GTK3 installation")
@@ -265,11 +260,22 @@ if(WIN32)
     find_library(SDL2_IMAGE_LIBRARY NAMES SDL2_image PATHS ${SDL2_PATH}/lib/x64)
     
     # Set variables for later use
-    set(GTKMM3_LIBRARIES ${GTKMM3_LIBRARY} ${GIOMM2_4_LIBRARY} ${GLIBMM2_4_LIBRARY} 
-                         ${CAIROMM1_0_LIBRARY} ${SIGC2_LIBRARY} ${OPENGL_gl_LIBRARY})
-    set(SDL2_LIBRARIES ${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY} ${OPENGL_gl_LIBRARY})
+    set(GTKMM3_LIBRARIES 
+        ${GTKMM3_LIBRARY} 
+        ${GIOMM2_4_LIBRARY} 
+        ${GLIBMM2_4_LIBRARY}
+        ${CAIROMM1_0_LIBRARY} 
+        ${SIGC2_LIBRARY} 
+        ${OPENGL_gl_LIBRARY}
+    )
     
-    # Add Windows-specific libraries
+    set(SDL2_LIBRARIES 
+        ${SDL2_LIBRARY} 
+        ${SDL2_IMAGE_LIBRARY} 
+        ${OPENGL_gl_LIBRARY}
+    )
+    
+    # Windows-specific libraries
     set(WINDOWS_LIBS
         gdi32
         shell32
@@ -302,91 +308,113 @@ if(WIN32)
     endif()
     
     message(STATUS "Using Windows-specific library paths")
-else()
-    # Linux/Unix package finding using pkg-config
+    
+else()  # Linux/Unix
+    # Détection des dépendances avec pkg-config
     find_package(PkgConfig REQUIRED)
     
-    # GTKmm et dépendances
+    # Détection de SDL2 et SDL2_image
+    pkg_check_modules(SDL2 REQUIRED sdl2)
+    pkg_check_modules(SDL2_IMAGE REQUIRED sdl2_image)
+    
+    # Détection de GTKmm et dépendances
     pkg_check_modules(GTKMM3 REQUIRED gtkmm-3.0)
     pkg_check_modules(GIOMM2_4 REQUIRED giomm-2.4)
     pkg_check_modules(GLIBMM2_4 REQUIRED glibmm-2.4)
     pkg_check_modules(CAIROMM1_0 REQUIRED cairomm-1.0)
     pkg_check_modules(SIGC2 REQUIRED sigc++-2.0)
     
-    # SDL2 et SDL2_image via pkg-config
-    pkg_check_modules(SDL2 REQUIRED sdl2)
-    pkg_check_modules(SDL2_IMAGE REQUIRED SDL2_image)
+    # Détection d'OpenGL et CURL
+    find_package(OpenGL REQUIRED)
+    find_package(CURL REQUIRED)
     
-    # Combine all libraries
+    # Configuration pour OpenGL
+    add_compile_definitions(USE_OPENGL)
+    
+    # Configuration des bibliothèques
     set(ALL_LIBS 
-        ${GTKMM3_LIBRARIES} 
-        ${GIOMM2_4_LIBRARIES} 
-        ${GLIBMM2_4_LIBRARIES} 
-        ${CAIROMM1_0_LIBRARIES} 
-        ${SIGC2_LIBRARIES} 
-        ${SDL2_LIBRARIES} 
+        ${GTKMM3_LIBRARIES}
+        ${GIOMM2_4_LIBRARIES}
+        ${GLIBMM2_4_LIBRARIES}
+        ${CAIROMM1_0_LIBRARIES}
+        ${SIGC2_LIBRARIES}
+        ${SDL2_LIBRARIES}
         ${SDL2_IMAGE_LIBRARIES}
+        ${OPENGL_LIBRARIES}
+        ${CURL_LIBRARIES}
     )
     
-    # Add X11 and other Unix-specific libraries
-    if(UNIX AND NOT APPLE)
-        find_package(X11 REQUIRED)
-        if(X11_FOUND)
-            include_directories(${X11_INCLUDE_DIR})
-            set(ALL_LIBS ${ALL_LIBS} ${X11_LIBRARIES} X11 Xrandr Xcursor Xinerama Xi)
-        endif()
-    endif()
+    # Ajouter les chemins d'inclusion nécessaires
+    include_directories(
+        ${GTKMM3_INCLUDE_DIRS}
+        ${GIOMM2_4_INCLUDE_DIRS}
+        ${GLIBMM2_4_INCLUDE_DIRS}
+        ${CAIROMM1_0_INCLUDE_DIRS}
+        ${SIGC2_INCLUDE_DIRS}
+        ${SDL2_INCLUDE_DIRS}
+        ${SDL2_IMAGE_INCLUDE_DIRS}
+        ${OPENGL_INCLUDE_DIR}
+        ${CURL_INCLUDE_DIRS}
+    )
     
-    message(STATUS "Using Unix/Linux pkg-config for libraries")
+    # Ajouter les répertoires de bibliothèques
+    link_directories(
+        ${GTKMM3_LIBRARY_DIRS}
+        ${GIOMM2_4_LIBRARY_DIRS}
+        ${GLIBMM2_4_LIBRARY_DIRS}
+        ${CAIROMM1_0_LIBRARY_DIRS}
+        ${SIGC2_LIBRARY_DIRS}
+        ${SDL2_LIBRARY_DIRS}
+        ${SDL2_IMAGE_LIBRARY_DIRS}
+        ${CURL_LIBRARY_DIRS}
+    )
+    
+    message(STATUS "Using Unix/Linux library paths")
 endif()
 
-# OpenGL
-find_package(OpenGL REQUIRED)
-find_package(GLEW REQUIRED)
-
-# X11
-find_package(X11 REQUIRED)
-
-# Ajout du sous-répertoire src
+# Inclusion des sous-répertoires
 add_subdirectory(src)
 
-# Ajout des tests si activés
-if(BUILD_TESTS)
-    enable_testing()
-    add_subdirectory(tests)
-endif()
-
 # Configuration des chemins d'installation
-include(GNUInstallDirs)
-set(CMAKE_INSTALL_LIBDIR ${CMAKE_INSTALL_LIBDIR})
-set(CMAKE_INSTALL_BINDIR ${CMAKE_INSTALL_BINDIR})
-set(CMAKE_INSTALL_INCLUDEDIR ${CMAKE_INSTALL_INCLUDEDIR})
+set(CMAKE_INSTALL_PREFIX "/usr/local" CACHE PATH "Installation directory")
+set(CMAKE_INSTALL_BINDIR "${CMAKE_INSTALL_PREFIX}/bin" CACHE PATH "Binary directory")
+set(CMAKE_INSTALL_LIBDIR "${CMAKE_INSTALL_PREFIX}/lib" CACHE PATH "Library directory")
+set(CMAKE_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_PREFIX}/include" CACHE PATH "Include directory")
+set(CMAKE_INSTALL_DATADIR "${CMAKE_INSTALL_PREFIX}/share" CACHE PATH "Data directory")
 
 # Configuration CPack pour la génération de paquets
+include(InstallRequiredSystemLibraries)
 set(CPACK_PACKAGE_NAME "open-yolo")
-set(CPACK_PACKAGE_VENDOR "Open-Yolo Project")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Gestionnaire de curseurs personnalisés pour Linux")
-set(CPACK_PACKAGE_VERSION_MAJOR "1")
-set(CPACK_PACKAGE_VERSION_MINOR "0")
-set(CPACK_PACKAGE_VERSION_PATCH "0")
-set(CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
-set(CPACK_PACKAGE_CONTACT "your.email@example.com")
-set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/Roddygithub/Open-Yolo")
+set(CPACK_PACKAGE_VENDOR "OpenYolo Team")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Gestionnaire de curseurs personnalisés")
+set(CPACK_PACKAGE_VERSION_MAJOR 1)
+set(CPACK_PACKAGE_VERSION_MINOR 0)
+set(CPACK_PACKAGE_VERSION_PATCH 0)
+set(CPACK_PACKAGE_CONTACT "contact@openyolo.org")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "OpenYolo Team <contact@openyolo.org>")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS 
+    "libgtkmm-3.0-dev, libsdl2-dev, libsdl2-image-dev, libcurl4-openssl-dev"
+)
+set(CPACK_RPM_PACKAGE_REQUIRES 
+    "gtkmm30-devel, SDL2-devel, SDL2_image-devel, libcurl-devel"
+)
+set(CPACK_STRIP_FILES TRUE)
+set(CPACK_SOURCE_IGNORE_FILES "/.git/;/build/;/.vscode/;/.idea/;*.swp;*.swo")
 
-# Configuration DEB
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Your Name <your.email@example.com>")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libgtkmm-3.0-1v5, libsdl2-2.0-0, libsdl2-image-2.0-0, libglew2.2, libgif7, libx11-6, libxrandr2, libxcursor1, libxinerama1, libxi6, libgl1")
-set(CPACK_DEBIAN_PACKAGE_SECTION "x11")
-set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
-set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
-
-# Configuration RPM
-set(CPACK_RPM_PACKAGE_LICENSE "MIT")
-set(CPACK_RPM_PACKAGE_GROUP "User Interface/X")
-set(CPACK_RPM_PACKAGE_REQUIRES "gtkmm30, SDL2, SDL2_image, glew, giflib, libX11, libXrandr, libXcursor, libXinerama, libXi, mesa-libGL")
-set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
-
-# Générateurs de paquets
-set(CPACK_GENERATOR "TGZ;DEB;RPM")
-
+# Inclure CPack après avoir défini toutes les variables
 include(CPack)
+
+# Message de fin de configuration
+message(STATUS "Configuration terminée pour ${PROJECT_NAME} ${PROJECT_VERSION}")
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "Installation directory: ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "Executables will be installed to: ${CMAKE_INSTALL_BINDIR}")
+message(STATUS "Libraries will be installed to: ${CMAKE_INSTALL_LIBDIR}")
+message(STATUS "Header files will be installed to: ${CMAKE_INSTALL_INCLUDEDIR}")
+
+# Afficher un message si la configuration est terminée avec succès
+if(CMAKE_PROJECT_NAME)
+    message(STATUS "${PROJECT_NAME} - Configuration terminée avec succès")
+else()
+    message(STATUS "Configuration terminée avec succès")
+endif()

@@ -7,10 +7,13 @@
 #include <sstream>
 #include <stdexcept>
 #include <vector>
+#include <cstdlib>  // Pour getenv
 
 // X11
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
+
+namespace input {
 
 struct DisplayManager::Impl {
     std::vector<DisplayInfo> displays;
@@ -134,8 +137,8 @@ struct DisplayManager::Impl {
     
     const DisplayInfo* getDisplayForWindow(int windowX, int windowY) const {
         for (const auto& display : displays) {
-            if (windowX >= display.x && windowX < display.x + display.width &&
-                windowY >= display.y && windowY < display.y + display.height) {
+            if (windowX >= display.x && windowX < display.x + static_cast<int>(display.width) &&
+                windowY >= display.y && windowY < display.y + static_cast<int>(display.height)) {
                 return &display;
             }
         }
@@ -196,11 +199,17 @@ void DisplayManager::updateDisplays() {
 }
 
 const std::vector<DisplayInfo>& DisplayManager::getDisplays() const {
-    return pImpl->getDisplays();
+    if (!pImpl) {
+        throw std::runtime_error("DisplayManager not initialized");
+    }
+    return pImpl->displays;
 }
 
 const DisplayInfo* DisplayManager::getPrimaryDisplay() const {
-    return pImpl->getPrimaryDisplay();
+    if (!pImpl) {
+        return nullptr;
+    }
+    return pImpl->primaryDisplay;
 }
 
 const DisplayInfo* DisplayManager::getDisplayForWindow(int windowX, int windowY) const {
@@ -230,3 +239,5 @@ void DisplayManager::beginFrame() {
 void DisplayManager::endFrame() {
     pImpl->endFrame();
 }
+
+} // namespace input

@@ -1,0 +1,22 @@
+{
+    "toggle_visible": ["Control_L", "Alt_L", "S"],
+    "increase_size": ["Control_L", "Alt_L", "Up"],
+    "decrease_size": ["Control_L", "Alt_L", "Down"],
+    "next_theme": ["Control_L", "Alt_L", "Right"],
+    "prev_theme": ["Control_L", "Alt_L", "Left"],
+    "reset_cursor": ["Control_L", "Alt_L", "R"],
+    "toggle_tracking": ["Control_L", "Alt_L", "P"],
+    "toggle_lock": ["Control_L", "Alt_L", "L"],
+    "toggle_game_mode": ["Control_L", "Alt_L", "G"],
+    "increase_opacity": ["Control_L", "Alt_L", "KP_Add"],
+    "decrease_opacity": ["Control_L", "Alt_L", "KP_Subtract"],
+    "set_theme_1": ["Control_L", "Alt_L", "1"],
+    "set_theme_2": ["Control_L", "Alt_L", "2"],
+    "set_theme_3": ["Control_L", "Alt_L", "3"],
+    "set_theme_4": ["Control_L", "Alt_L", "4"],
+    "set_theme_5": ["Control_L", "Alt_L", "5"],
+    "set_theme_6": ["Control_L", "Alt_L", "6"],
+    "set_theme_7": ["Control_L", "Alt_L", "7"],
+    "set_theme_8": ["Control_L", "Alt_L", "8"],
+    "set_theme_9": ["Control_L", "Alt_L", "9"]
+}

@@ -1,25 +1,39 @@
 #pragma once
 
-#include <functional>
-#include <string>
-#include <map>
-#include <memory>
-#include <mutex>
-#include <set>
-#include <gtkmm.h>
-#include <gdkmm/event.h>
-#include <gdkmm/display.h>
-#include <gdkmm/device.h>
-#include <gdkmm/seat.h>
-#include <gdkmm/window.h>
+// Standard C++
+#include <cstdint>    // Pour les types entiers
+#include <cstring>    // Pour memcpy, strlen, etc.
+#include <functional> // Pour std::function
+#include <map>        // Pour std::map
+#include <memory>     // Pour std::shared_ptr, etc.
+#include <mutex>      // Pour std::mutex
+#include <set>        // Pour std::set
+#include <string>     // Pour std::string
+#include <vector>     // Pour std::vector
+
+// GTKmm
+#include <gdkmm.h>  // Inclut tous les en-têtes Gdkmm nécessaires
+#include <gtkmm.h>   // Inclut tous les en-têtes Gtkmm nécessaires
+
+// Project headers
+#include "InputBackend.hpp"
 
 // Forward declarations
 namespace cursor_manager {
     class CursorManager;
 }
 
-// Déclaration anticipée de MainWindow
+namespace displaymanager {
+    class DisplayManager;
+}
+
+namespace input {
+
+// Forward declaration of MainWindow
 class MainWindow;
+
+// Déclaration forward pour InputBackend
+class InputBackend;
 
 class InputManager {
 public:
@@ -37,7 +51,9 @@ public:
             : accelerator(accel), accelKey(key), mods(modifiers), callback(cb) {}
     };
     
-    InputManager();
+    // Constructeurs et destructeur
+    InputManager() : InputManager(nullptr) {}
+    explicit InputManager(std::shared_ptr<displaymanager::DisplayManager> displayManager);
     ~InputManager();
     
     /**
@@ -51,7 +67,7 @@ public:
      * @param window Pointeur vers la fenêtre principale
      * @param cursorManager Pointeur partagé vers le gestionnaire de curseur
      */
-    void setupGTKIntegration(MainWindow* window, std::shared_ptr<cursor_manager::CursorManager> cursorManager);
+    void setupGTKIntegration(Gtk::Window* window, std::shared_ptr<cursor_manager::CursorManager> cursorManager);
     
     /**
      * Enregistre un nouveau raccourci clavier
@@ -84,22 +100,27 @@ private:
     bool checkForDeviceChanges(); // Vérification périodique des périphériques
     void onDeviceRemoved(const Glib::RefPtr<Gdk::Device>& device); // Gestion de la suppression d'un périphérique
     
-    // Données membres
-    Glib::RefPtr<Gdk::Display> display_;
-    Glib::RefPtr<Gdk::DeviceManager> deviceManager_;
+    // Références aux composants
+    Gtk::Window* mainWindow_ = nullptr;
+    std::shared_ptr<cursor_manager::CursorManager> cursorManager_;
+    std::shared_ptr<displaymanager::DisplayManager> displayManager_;
     
     // Gestion des périphériques
+    Glib::RefPtr<Gdk::Display> display_;
+    Glib::RefPtr<Gdk::DeviceManager> deviceManager_;
     std::set<Glib::RefPtr<Gdk::Device>> keyboardDevices_;
-    std::mutex devicesMutex_;
     
     // Gestion des raccourcis
     std::map<std::string, Shortcut> shortcuts_;
-    mutable std::mutex shortcutsMutex_;
     
-    // Références aux autres composants
-    MainWindow* mainWindow_ = nullptr;
-    std::shared_ptr<cursor_manager::CursorManager> cursorManager_;
+    // Backend d'entrée
+    std::unique_ptr<InputBackend> backend_;
+    
+    // Synchronisation
+    mutable std::mutex mutex_;
+    mutable std::mutex shortcutsMutex_;
     
     // Constantes
     static constexpr const char* LOG_DOMAIN = "InputManager";
 };
+} // namespace input

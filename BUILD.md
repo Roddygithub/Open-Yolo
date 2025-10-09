@@ -63,6 +63,8 @@ sudo apt-get install -y \
     libgif-dev \
     xorg-dev \
     libx11-xcb-dev \
+    libwayland-dev \
+    libxkbcommon-dev \
     libcairo2-dev \
     libcairomm-1.0-dev \
     libglm-dev
@@ -96,6 +98,8 @@ sudo dnf install -y \
     glew-devel \
     giflib-devel \
     xorg-x11-server-devel \
+    wayland-devel \
+    libxkbcommon-devel \
     libxcb-devel \
     cairo-devel \
     cairomm-devel
@@ -116,6 +120,7 @@ sudo pacman -S --needed \
     glew \
     giflib \
     libx11 \
+    wayland \
     libxrandr \
     libxcursor \
     cairo \

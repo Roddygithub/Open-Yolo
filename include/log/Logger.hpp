@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <map>
 #include <atomic>
+#include <thread>
 
 namespace fs = std::filesystem;
 
@@ -179,10 +180,10 @@ private:
         std::string file;
         int line;
         std::string function;
+        std::thread::id threadId;
         std::chrono::system_clock::time_point timestamp;
         LogLevel level;
         std::string message;
-        std::thread::id threadId;
     };
 
     // Méthodes privées
@@ -204,6 +205,7 @@ private:
     bool m_consoleOutput;
     bool m_initialized;
     std::atomic<bool> m_shutdownRequested;
+    std::thread m_logThread;
 };
 
 // Macro pour faciliter l'utilisation du logger

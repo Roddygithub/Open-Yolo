@@ -1,25 +1,31 @@
-#include "../../include/config/ConfigManager.hpp"
-
 // Standard C++
 #include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <map>
-#include <mutex>
+#include <string>
 #include <sstream>
 #include <stdexcept>
-#include <string>
+#include <cstring>
+#include <unistd.h>
+#include <mutex>
+
+// En-tête de la classe
+#include "config/ConfigManager.hpp"
 
 // POSIX
 #include <pwd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <unistd.h>
 
 namespace fs = std::filesystem;
 
 namespace openyolo {
+
+// Définition des membres statiques
+std::mutex ConfigManager::m_mutex;
+std::map<std::string, std::string> ConfigManager::m_values;
 
 ConfigManager& ConfigManager::instance() {
     static ConfigManager instance;
@@ -29,16 +35,55 @@ ConfigManager& ConfigManager::instance() {
 void ConfigManager::load(const fs::path& configPath) {
     std::lock_guard<std::mutex> lock(m_mutex);
     
+    // Vérifier si le chemin est vide
+    if (configPath.empty()) {
+        throw std::invalid_argument("Le chemin de configuration ne peut pas être vide");
+    }
+
+    // Vérifier si le chemin est un répertoire
+    if (fs::is_directory(configPath)) {
+        throw std::invalid_argument("Le chemin de configuration est un répertoire: " + configPath.string());
+    }
+    
     // Vérifier si le fichier existe
     if (!fs::exists(configPath)) {
         // Créer le répertoire parent s'il n'existe pas
-        fs::create_directories(configPath.parent_path());
-        return; // Pas d'erreur si le fichier n'existe pas
+        try {
+            const auto parentPath = configPath.parent_path();
+            if (!parentPath.empty() && !fs::exists(parentPath)) {
+                fs::create_directories(parentPath);
+                // Définir les permissions appropriées (rwxr-xr-x)
+                fs::permissions(parentPath, 
+                              fs::perms::owner_all | 
+                              fs::perms::group_read | fs::perms::group_exec |
+                              fs::perms::others_read | fs::perms::others_exec,
+                              fs::perm_options::replace);
+            }
+            // Créer un fichier de configuration par défaut
+            save(configPath);
+            return;
+        } catch (const fs::filesystem_error& e) {
+            throw std::runtime_error("Échec de la création du répertoire de configuration: " + 
+                                  std::string(e.what()));
+        }
     }
 
-    std::ifstream file(configPath);
-    if (!file.is_open()) {
-        throw std::runtime_error("Impossible d'ouvrir le fichier de configuration: " + configPath.string());
+    // Vérifier les permissions du fichier
+    try {
+        const auto status = fs::status(configPath);
+        if ((status.permissions() & fs::perms::owner_read) == fs::perms::none) {
+            throw std::runtime_error("Permissions insuffisantes pour lire le fichier de configuration");
+        }
+    } catch (const fs::filesystem_error& e) {
+        throw std::runtime_error("Erreur lors de la vérification des permissions: " + 
+                              std::string(e.what()));
+    }
+
+    // Ouvrir le fichier avec gestion d'erreur
+    std::ifstream file(configPath, std::ios::in);
+    if (!file) {
+        throw std::runtime_error("Impossible d'ouvrir le fichier de configuration: " + 
+                              configPath.string() + " (" + strerror(errno) + ")");
     }
 
     std::string currentSection;
@@ -106,7 +151,7 @@ void ConfigManager::save(const fs::path& configPath) const {
     file << "# Ce fichier est généré automatiquement, ne modifiez que si vous savez ce que vous faites\n\n";
     
     // Trier les clés par section pour un affichage plus propre
-    std::map<std::string, std::map<std::string, std::string>> sections;
+    std::map<std::string, std::map<std::string, std::string> > sections;
     
     for (const auto& pair : m_values) {
         size_t dotPos = pair.first.find('.');

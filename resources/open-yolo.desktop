@@ -1,0 +1,24 @@
+[Desktop Entry]
+Type=Application
+Name=Open-Yolo
+GenericName=Gestionnaire de curseurs
+Comment=Personnalisez vos curseurs système
+Exec=open-yolo %U
+Icon=open-yolo
+Terminal=false
+Categories=Utility;GTK;Settings;
+Keywords=cursor;theme;customization;
+StartupNotify=true
+StartupWMClass=open-yolo
+MimeType=x-scheme-handler/open-yolo;
+Actions=Settings;
+
+[Desktop Action Settings]
+Name=Paramètres
+Exec=open-yolo --settings
+Icon=preferences-system
+
+[Desktop Action About]
+Name=À propos d'Open-Yolo
+Exec=open-yolo --about
+Icon=help-about

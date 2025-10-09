@@ -1,75 +1,68 @@
 # Fichier CMake pour le répertoire src
 
-# =============================================================================
-# 0. En-têtes précompilés (PCH)
-# =============================================================================
-# Crée un en-tête précompilé pour accélérer la compilation.
-set(PCH_HEADER "${CMAKE_SOURCE_DIR}/include/stdafx.h")
-
-# Applique le PCH à toutes les cibles de ce répertoire et des sous-répertoires.
-# Note: Chaque cible doit inclure "stdafx.h" en premier.
-target_precompile_headers(OpenYolo PUBLIC $<BUILD_INTERFACE:${PCH_HEADER}>)
-
-# =============================================================================
-# 1. Définition des modules en tant que bibliothèques d'objets
-# =============================================================================
-# Cette approche améliore la modularité et les temps de compilation.
-
-# Module de configuration
-add_library(config OBJECT config/ConfigManager.cpp)
-target_include_directories(config PUBLIC ${CMAKE_SOURCE_DIR}/include)
-
-# Module de gestion du curseur
-add_library(cursormanager OBJECT cursormanager/CursorManager.cpp cursormanager/ShaderProgram.cpp)
-target_include_directories(cursormanager PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(cursormanager PUBLIC config OpenGL::GL GLEW::GLEW)
-
-# Module de gestion de l'affichage
-add_library(displaymanager OBJECT displaymanager/DisplayManager.cpp)
-target_include_directories(displaymanager PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(displaymanager PUBLIC
-    ${X11_LIBRARIES}
-    ${X11_X11_LIB}
-    ${X11_Xrandr_LIB}
-)
-
-# Module de l'interface graphique
-add_library(gui OBJECT gui/MainWindow.cpp)
-target_include_directories(gui PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_include_directories(gui PUBLIC
-    ${GTKMM3_INCLUDE_DIRS}
-)
-target_link_libraries(gui PUBLIC
-    config cursormanager displaymanager input log
-    ${GTKMM3_LIBRARIES}
-)
-
-# Module de gestion des entrées
-add_library(input OBJECT input/InputManager.cpp)
-target_include_directories(input PUBLIC ${CMAKE_SOURCE_DIR}/include)
-
-# Module de journalisation
-add_library(log OBJECT log/Logger.cpp)
-target_include_directories(log PUBLIC ${CMAKE_SOURCE_DIR}/include)
+# Ajout des sous-répertoires pour chaque module.
+# Chaque sous-répertoire contient son propre CMakeLists.txt,
+# ce qui rend le build plus modulaire et plus facile à maintenir.
+add_subdirectory(config)
+add_subdirectory(log) # Pas de fichier, mais on le garde pour la structure
+add_subdirectory(cursormanager)
+add_subdirectory(displaymanager)
+add_subdirectory(input)
+add_subdirectory(gui)
 
 # =============================================================================
 # 2. Création de l'exécutable principal
 # =============================================================================
 
-# Création de l'exécutable
-add_executable(OpenYolo main.cpp)
+# Création de l'exécutable avec la version simplifiée
+add_executable(OpenYolo 
+    main_simple.cpp
+    openyolo/AppCore.cpp
+)
+
+# Trouver les dépendances nécessaires
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GTKMM3 REQUIRED gtkmm-3.0)
+pkg_check_modules(GDKMM3 REQUIRED gdkmm-3.0)
+pkg_check_modules(GLIBMM2_4 REQUIRED glibmm-2.4)
+pkg_check_modules(GIOMM2_4 REQUIRED giomm-2.4)
+pkg_check_modules(CAIROMM REQUIRED cairomm-1.0)
+pkg_check_modules(PANGOMM REQUIRED pangomm-1.4)
+pkg_check_modules(ATKMM REQUIRED atkmm-1.6)
 
 # Liaison des bibliothèques d'objets à l'exécutable
 target_link_libraries(OpenYolo PRIVATE
-    gui # La liaison de 'gui' inclut transitivement les autres modules
+    gui
+    inputmanager
+    cursormanager
+    displaymanager
+    config
+    ${GTKMM3_LIBRARIES}
+    ${GDKMM3_LIBRARIES}
+    ${GLIBMM2_4_LIBRARIES}
+    ${GIOMM2_4_LIBRARIES}
+    ${CAIROMM_LIBRARIES}
+    ${PANGOMM_LIBRARIES}
+    ${ATKMM_LIBRARIES}
+    ${X11_LIBRARIES}
+    ${X11_X11_LIB}
+    ${X11_Xfixes_LIB}
+    ${X11_Xcursor_LIB}
+    dl
+    pthread
 )
 
 # Configuration des propriétés de la cible
-# Les includes sont maintenant gérés par les bibliothèques d'objets,
-# mais on peut le laisser pour la compatibilité avec certains IDE.
 target_include_directories(OpenYolo PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/src
+    ${GTKMM3_INCLUDE_DIRS}
+    ${GDKMM3_INCLUDE_DIRS}
+    ${GLIBMM2_4_INCLUDE_DIRS}
+    ${GIOMM2_4_INCLUDE_DIRS}
+    ${CAIROMM_INCLUDE_DIRS}
+    ${PANGOMM_INCLUDE_DIRS}
+    ${ATKMM_INCLUDE_DIRS}
 )
 
 # Configuration des propriétés de compilation
@@ -90,8 +83,6 @@ target_compile_options(OpenYolo PRIVATE
 )
 
 # Liaison des bibliothèques externes restantes
-# Les dépendances principales (GTK, OpenGL, X11) sont maintenant liées
-# aux bibliothèques d'objets qui les utilisent.
 target_link_libraries(OpenYolo PRIVATE
     ${SDL2_LIBRARIES}
     ${SDL2_IMAGE_LIBRARIES}

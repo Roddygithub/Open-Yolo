@@ -12,17 +12,20 @@ add_library(gui ${GUI_SOURCES})
 target_include_directories(gui PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/..
-    ${GTKMM_INCLUDE_DIRS}
+    ${GTKMM3_INCLUDE_DIRS}
+    ${GDKMM3_INCLUDE_DIRS}
     ${CAIROMM_INCLUDE_DIRS}
-    ${GLIBMM_INCLUDE_DIRS}
+    ${GLIBMM2_4_INCLUDE_DIRS}
+    ${SIGC2_INCLUDE_DIRS}
 )
 
 # Lier les dépendances
 target_link_libraries(gui PRIVATE
-    ${GTKMM_LIBRARIES}
+    ${GTKMM3_LIBRARIES}
+    ${GDKMM3_LIBRARIES}
     ${CAIROMM_LIBRARIES}
-    ${GLIBMM_LIBRARIES}
-    ${SIGC++_LIBRARIES}
+    ${GLIBMM2_4_LIBRARIES}
+    ${SIGC2_LIBRARIES}
 )
 
 # Installation de la bibliothèque
